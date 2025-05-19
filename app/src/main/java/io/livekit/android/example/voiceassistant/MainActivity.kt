@@ -66,7 +66,10 @@ class MainActivity : ComponentActivity() {
 
         var selectedTabIndex by remember { mutableIntStateOf(0) }
         var activeConversationId by remember { mutableStateOf<String?>(null) }
-        Box(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+        ) {
             // Content area
             Column(modifier = Modifier.fillMaxSize()) {
                 when (selectedTabIndex) {

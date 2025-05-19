@@ -48,6 +48,8 @@ fun HistoryScreen(
     }
 
     Scaffold(
+        modifier = Modifier
+            .padding(bottom = 25.dp),
         floatingActionButton = {
             if (isLoggedIn) {
                 FloatingActionButton(onClick = {

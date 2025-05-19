@@ -76,8 +76,6 @@ data class CreateMessageRequest(
     val role: String, // "user"
     val content: String,
     val message_type: String = "text",
-    val voice_url: String? = null,
-    val metadata: Map<String, Any>? = null
 )
 
 // --- Voice Session Models ---

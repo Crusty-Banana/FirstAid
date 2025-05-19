@@ -217,4 +217,35 @@ class ChatViewModel : ViewModel() {
     }
 
     // TODO: Implement sendMessage(conversationId, messageContent)
+
+    fun sendMessage(conversationId: String, role: String, messageContent: String) {
+        if (!AuthManager.isLoggedIn) {
+            _error.value = "Please log in to send a message"
+            return
+        }
+        viewModelScope.launch {
+            _error.value = null
+            val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId/messages"
+            Timber.d { "Send Messages to Conversation" }
+            try {
+                val createRequest = CreateMessageRequest(role = role, content = messageContent, message_type = "text")
+                val requestBody = gson.toJson(createRequest).toRequestBody(jsonMediaType)
+                val request = Request.Builder().url(fullUrl).post(requestBody).build()
+
+                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
+                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+
+                if (response.code == 200 && !responseBodyString.isNullOrEmpty()) {
+                    val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
+                    Timber.i { "Message sent (ID: ${newConversation.id})" }
+                } else {
+                    _error.value = parseError(responseBodyString, response.code, response.message, "Send message failed")
+                    _isLoading.value = false
+                }
+            } catch (e: Exception) {
+                handleException(e, "send message", fullUrl)
+                _isLoading.value = false
+            }
+        }
+    }
 }
