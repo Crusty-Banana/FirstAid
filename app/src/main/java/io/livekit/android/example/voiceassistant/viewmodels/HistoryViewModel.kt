@@ -80,43 +80,43 @@ class HistoryViewModel : ViewModel() {
         }
     }
 
-    fun createNewConversation(title: String) {
-        if (!AuthManager.isLoggedIn) {
-            _error.value = "Please log in to create a conversation."
-            return
-        }
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            val fullUrl = "$API_BASE_URL/api/v1/conversations/"
-            Timber.d { "Creating new conversation: '$title' at $fullUrl" }
-            try {
-                val createRequest = CreateConversationRequest(title = title)
-                val requestBody = gson.toJson(createRequest).toRequestBody(jsonMediaType)
-                val request = Request.Builder().url(fullUrl).post(requestBody).build()
-
-                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
-                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
-
-                if (response.code == 201) { // Created
-                    if (!responseBodyString.isNullOrEmpty()) {
-                        val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
-                        Timber.i { "New conversation created: ${newConversation.id}" }
-                        _newlyCreatedConversationId.emit(newConversation.id) // Signal success
-                        // fetchConversations() // List will be refreshed by observer or upon re-entering screen
-                    } else {
-                        _error.value = "Conversation created but no data returned."
-                    }
-                } else {
-                    _error.value = parseError(responseBodyString, response.code, response.message, "Create conversation failed")
-                }
-            } catch (e: Exception) {
-                handleException(e, "create conversation", fullUrl)
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
+//    fun createNewConversation(title: String) {
+//        if (!AuthManager.isLoggedIn) {
+//            _error.value = "Please log in to create a conversation."
+//            return
+//        }
+//        viewModelScope.launch {
+//            _isLoading.value = true
+//            _error.value = null
+//            val fullUrl = "$API_BASE_URL/api/v1/conversations/"
+//            Timber.d { "Creating new conversation: '$title' at $fullUrl" }
+//            try {
+//                val createRequest = CreateConversationRequest(title = title)
+//                val requestBody = gson.toJson(createRequest).toRequestBody(jsonMediaType)
+//                val request = Request.Builder().url(fullUrl).post(requestBody).build()
+//
+//                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
+//                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+//
+//                if (response.code == 201) { // Created
+//                    if (!responseBodyString.isNullOrEmpty()) {
+//                        val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
+//                        Timber.i { "New conversation created: ${newConversation.id}" }
+//                        _newlyCreatedConversationId.emit(newConversation.id) // Signal success
+//                        // fetchConversations() // List will be refreshed by observer or upon re-entering screen
+//                    } else {
+//                        _error.value = "Conversation created but no data returned."
+//                    }
+//                } else {
+//                    _error.value = parseError(responseBodyString, response.code, response.message, "Create conversation failed")
+//                }
+//            } catch (e: Exception) {
+//                handleException(e, "create conversation", fullUrl)
+//            } finally {
+//                _isLoading.value = false
+//            }
+//        }
+//    }
 
     fun clearError() {
         _error.value = null

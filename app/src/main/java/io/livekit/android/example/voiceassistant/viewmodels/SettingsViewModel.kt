@@ -152,6 +152,51 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    fun refreshAccessToken() {
+        viewModelScope.launch {
+            val refreshToken = AuthManager.getRefreshTokenValue()
+            if (refreshToken == null) {
+                _operationError.value = "No refresh token"
+                return@launch
+            }
+
+            _isLoading.value = true
+            _operationError.value = null
+            val fullUrl = "$API_BASE_URL/api/v1/auth/refresh"
+            val newUrlWithQuery = "$fullUrl?refresh_token=$refreshToken"
+
+            Timber.d { "Attempting to refresh access token from $fullUrl" }
+            try {
+//                val refreshRequest = RefreshTokenRequest(refreshToken)
+//                val requestBodyJson = gson.toJson(refreshRequest)
+//                val requestBody = requestBodyJson.toRequestBody(jsonMediaType)
+                val emptyJsonBody = "{}".toRequestBody(jsonMediaType)
+                val request = Request.Builder().url(newUrlWithQuery).post(emptyJsonBody).build()
+
+                val response = withContext(Dispatchers.IO) { unauthHttpClient.newCall(request).execute() }
+                val responseBodyString = withContext(Dispatchers.IO) { response.body.string() }
+
+                if (response.isSuccessful) {
+                    if (responseBodyString.isNotEmpty()) {
+                        val refreshTokenResponse = gson.fromJson(responseBodyString, RefreshTokenResponse::class.java)
+                        AuthManager.refreshToken(
+                            refreshTokenResponse.access_token,
+                            refreshTokenResponse.refresh_token
+                        )
+                    } else {
+                        _operationError.value = "Refresh successful but return empty response."
+                    }
+                } else {
+                    _operationError.value = parseError(responseBodyString, response.code, response.message)
+                }
+            } catch (e: Exception) {
+                handleException(e, "refresh token", fullUrl)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun clearErrorAndStatus() {
         _operationError.value = null
         _registrationStatus.value = null

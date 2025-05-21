@@ -1,11 +1,13 @@
 package io.livekit.android.example.voiceassistant.network
 
 import com.github.ajalt.timberkt.Timber
+import com.google.gson.Gson
 import io.livekit.android.example.voiceassistant.auth.AuthInterceptor
 import io.livekit.android.example.voiceassistant.auth.AuthManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
+import io.livekit.android.example.voiceassistant.auth.TokenRefreshAuthenticator
 
 object NetworkClient {
 

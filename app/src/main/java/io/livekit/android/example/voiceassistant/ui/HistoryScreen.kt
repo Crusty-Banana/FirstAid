@@ -14,13 +14,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.livekit.android.example.voiceassistant.data.Conversation
+import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.HistoryViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    historyViewModel: HistoryViewModel = viewModel(),
+    chatViewModel: ChatViewModel = ChatViewModel(),
+    historyViewModel: HistoryViewModel = HistoryViewModel(),
     onSelectConversationAndNavigate: (conversationId: String) -> Unit // Combines selection and navigation trigger
 ) {
     val conversations by historyViewModel.conversations.collectAsState()
@@ -130,8 +132,10 @@ fun HistoryScreen(
                             onClick = {
                                 if (newConversationTitle.isNotBlank()) {
                                     focusManager.clearFocus()
-                                    historyViewModel.createNewConversation(newConversationTitle)
                                     showCreateDialog = false
+                                    chatViewModel.createNewConversationAndSelect(newConversationTitle) {
+                                        onSelectConversationAndNavigate(it)
+                                    }
                                 }
                             },
                             enabled = newConversationTitle.isNotBlank()

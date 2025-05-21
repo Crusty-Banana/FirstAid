@@ -16,11 +16,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
+fun SettingsScreen(
+    chatViewModel: ChatViewModel = ChatViewModel(),
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
     val isLoading by settingsViewModel.isLoading.collectAsState()
     val operationError by settingsViewModel.operationError.collectAsState()
     val loggedInUserEmail by settingsViewModel.loggedInUserEmail.collectAsState()
@@ -91,6 +95,7 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                             onClick = {
                                 focusManager.clearFocus()
                                 settingsViewModel.login(emailInput, passwordInput)
+                                chatViewModel.setIsAuthExpired(false)
                             },
                             enabled = emailInput.isNotBlank() && passwordInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
@@ -186,6 +191,14 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
                         onClick = { settingsViewModel.logout() },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Logout") }
+
+                    Button(
+                        onClick = {
+                            settingsViewModel.refreshAccessToken()
+                            chatViewModel.setIsAuthExpired(false)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Refresh Token") }
                 }
                 operationError?.let { // Display logout errors too
                     Spacer(modifier = Modifier.height(16.dp))

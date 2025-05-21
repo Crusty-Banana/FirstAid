@@ -34,6 +34,17 @@ data class ApiError(
 
 data class LogoutResponse(val message: String)
 
+data class RefreshTokenRequest(
+    val refresh_token: String
+)
+
+// Expected response from the refresh token endpoint
+data class RefreshTokenResponse(
+    val access_token: String,
+    val refresh_token: String,
+    val token_type: String = "Bearer",
+    val expires_in: Int? = null
+)
 
 // --- Conversation Models ---
 data class Conversation(

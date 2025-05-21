@@ -33,21 +33,25 @@ import androidx.compose.ui.unit.sp
 import com.github.ajalt.timberkt.Timber
 import io.livekit.android.LiveKit
 import io.livekit.android.annotations.Beta
-import io.livekit.android.example.voiceassistant.ui.ChatScreen
 import io.livekit.android.example.voiceassistant.ui.HistoryScreen
+import io.livekit.android.example.voiceassistant.ui.NewChatScreen
 import io.livekit.android.example.voiceassistant.ui.SettingsScreen
 import io.livekit.android.example.voiceassistant.ui.theme.LiveKitVoiceAssistantExampleTheme
+import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.util.LoggingLevel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LiveKit.loggingLevel = LoggingLevel.DEBUG
+
+        val chatViewModel = ChatViewModel()
         requireNeededPermissions {
             setContent {
                 LiveKitVoiceAssistantExampleTheme {
                     TopLevelApp(
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        chatViewModel = chatViewModel
                     )
                 }
             }
@@ -55,7 +59,12 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun TopLevelApp(modifier: Modifier = Modifier) {
+    fun TopLevelApp(
+        modifier: Modifier = Modifier,
+        chatViewModel: ChatViewModel = ChatViewModel()
+    ) {
+        Timber.i {"Load TopLevelApp"}
+        Timber.i {"ViewModel instance in X: $chatViewModel"}
         val tabs = listOf("Home", "Chat", "History", "Settings")
         val tabIcons = listOf(
             Pair(R.drawable.ic_home, R.drawable.ic_home_filled),
@@ -63,9 +72,10 @@ class MainActivity : ComponentActivity() {
             Pair(R.drawable.ic_log, R.drawable.ic_log_filled),
             Pair(R.drawable.ic_settings, R.drawable.ic_settings_filled),
         )
-
         var selectedTabIndex by remember { mutableIntStateOf(0) }
         var activeConversationId by remember { mutableStateOf<String?>(null) }
+        var showTabBar by remember {mutableStateOf(true)}
+
         Box(
             modifier = modifier
                 .fillMaxSize()
@@ -74,58 +84,63 @@ class MainActivity : ComponentActivity() {
             Column(modifier = Modifier.fillMaxSize()) {
                 when (selectedTabIndex) {
                     0 -> Home()
-                    1 -> ChatScreen( // Chat Tab
-                        activeConversationIdFromArgs = activeConversationId,
-                        onUpdateActiveConversationId = { convId ->
+                    1 -> NewChatScreen( // Chat Tab
+                        activeConversationIdFromTopLevel = activeConversationId,
+                        setActiveConversationIdFromTopLevel = { convId ->
                             activeConversationId = convId
                             // If a new conversation is started from ChatScreen itself,
                             // it's already on the ChatScreen. No tab switch needed here.
-                        }
+                        },
+                        setShowTabBar = { show -> showTabBar = show },
+                        chatViewModel = chatViewModel
                     )
                     2 -> HistoryScreen( // History Tab
                         onSelectConversationAndNavigate = { conversationId ->
                             Timber.d { "History: Conversation $conversationId selected. Navigating to Chat." }
                             activeConversationId = conversationId
                             selectedTabIndex = 1
-                        }
+                        },
+                        chatViewModel = chatViewModel
                     )
-                    3 -> SettingsScreen()
+                    3 -> SettingsScreen(chatViewModel = chatViewModel)
                 }
             }
 
             // Tab bar at the bottom
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-            ) {
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor = Color(0xFF134D8B),
-                    contentColor = Color.White,
-                    divider = {},
-                    modifier = Modifier.height(50.dp)
+            if (showTabBar) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
                 ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index },
-                            content = {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(vertical = 4.dp) // adjust vertical padding
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = if (selectedTabIndex == index) tabIcons[index].second else tabIcons[index].first),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(26.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(1.dp)) // reduce space between icon and text
-                                    Text(text = title, fontSize = 10.sp)
+                    TabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        containerColor = Color(0xFF134D8B),
+                        contentColor = Color.White,
+                        divider = {},
+                        modifier = Modifier.height(50.dp)
+                    ) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                content = {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(vertical = 4.dp) // adjust vertical padding
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = if (selectedTabIndex == index) tabIcons[index].second else tabIcons[index].first),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(26.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(1.dp)) // reduce space between icon and text
+                                        Text(text = title, fontSize = 10.sp)
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

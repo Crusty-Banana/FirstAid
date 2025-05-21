@@ -42,6 +42,24 @@ class ChatViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _isActiveLoading = MutableStateFlow(false)
+    val isActiveLoading: StateFlow<Boolean> = _isActiveLoading.asStateFlow()
+
+    private val _isVoiceSessionLoading = MutableStateFlow(false)
+    val isVoiceSessionLoading: StateFlow<Boolean> = _isVoiceSessionLoading.asStateFlow()
+
+    private val _isAuthExpired = MutableStateFlow(false)
+    val isAuthExpired: StateFlow<Boolean> = _isAuthExpired.asStateFlow()
+
+    fun setIsAuthExpired(isAuthExpired: Boolean) {
+        Timber.d { "Setting auth expired to $isAuthExpired." }
+        _isAuthExpired.value = isAuthExpired
+    }
+
+    fun setIsActiveLoading(isLoading: Boolean) {
+        Timber.d { "Setting active loading to $isLoading." }
+        _isActiveLoading.value = isLoading
+    }
     val isLoggedIn: StateFlow<Boolean> = AuthManager.accessToken
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), AuthManager.isLoggedIn)
@@ -56,27 +74,24 @@ class ChatViewModel : ViewModel() {
         }
         _currentConversationId.value = conversationId
         if (conversationId != null) {
-            loadConversationAndInitSession(conversationId)
+            fetchMessages(conversationId)
         } else {
             resetChatState()
         }
     }
 
-    private fun loadConversationAndInitSession(conversationId: String) {
+    fun initVoiceSession(conversationId: String) {
         if (!AuthManager.isLoggedIn) {
-            _error.value = "Please log in to use chat."
+            _error.value = "Please log in to use voice chat."
             resetChatState()
             return
         }
-        Timber.d { "Loading conversation and session for ID: $conversationId" }
+        Timber.d { "Initiate Voice Session for ID: $conversationId" }
         viewModelScope.launch {
-            _isLoading.value = true
             _error.value = null
-            _liveKitToken.value = null // Reset previous token
-            _messages.value = emptyList() // Clear previous messages
+            _liveKitToken.value = null
 
             try {
-                // Step 1: Create Voice Session to get LiveKit token
                 val voiceSessionRequest = CreateVoiceSessionRequest(conversation_id = conversationId)
                 val vsRequestBody = gson.toJson(voiceSessionRequest).toRequestBody(jsonMediaType)
                 val vsRequest = Request.Builder()
@@ -91,24 +106,30 @@ class ChatViewModel : ViewModel() {
                     val voiceSession = gson.fromJson(vsResponseBodyString, VoiceSessionResponse::class.java)
                     _liveKitToken.value = voiceSession.token
                     Timber.i { "LiveKit voice session created, token received for conversation $conversationId" }
-                    // Step 2: Fetch messages for this conversation
-                    fetchMessages(conversationId) // This will set isLoading = false at its end
+                    _isActiveLoading.value = false
+                } else if (vsResponse.code == 400) {
+                    _isAuthExpired.value = true
+                    _error.value = parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
+                    _isLoading.value = false
                 } else {
                     _error.value = parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
-                    _isLoading.value = false // Failed to get LK token, stop loading
+                    _isActiveLoading.value = false // Failed to get LK token, stop loading
                 }
             } catch (e: Exception) {
-                handleException(e, "initialize chat session for $conversationId", "")
-                _isLoading.value = false
+                handleException(e, "Error while initialize voice session for $conversationId", "")
+                _isActiveLoading.value = false
             }
-            // isLoading will be set to false by fetchMessages or catch block
         }
     }
 
-    private fun fetchMessages(conversationId: String) {
+    fun fetchMessages(conversationId: String, enableLoading: Boolean = false) {
         viewModelScope.launch {
             // isLoading is managed by the caller (loadConversationAndInitSession)
             // _error.value = null; // Don't clear potential voice session error
+            if (enableLoading) {
+                _isLoading.value = true
+            }
+
             val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId/messages"
             Timber.d { "Fetching messages for $conversationId from $fullUrl" }
             try {
@@ -160,6 +181,10 @@ class ChatViewModel : ViewModel() {
                     Timber.i { "New conversation created (ID: ${newConversation.id}). Signaling selection." }
                     onCreatedAndSelected(newConversation.id) // This callback should update TopLevelApp's activeConversationId
                     // setActiveConversation(newConversation.id) will be called due to state change in TopLevelApp
+                } else if (response.code == 400) {
+                    _isAuthExpired.value = true
+                    _error.value = parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
+                    _isLoading.value = false
                 } else {
                     _error.value = parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
                     _isLoading.value = false
@@ -238,6 +263,10 @@ class ChatViewModel : ViewModel() {
                 if (response.code == 200 && !responseBodyString.isNullOrEmpty()) {
                     val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
                     Timber.i { "Message sent (ID: ${newConversation.id})" }
+                } else if (response.code == 400) {
+                    _isAuthExpired.value = true
+                    _error.value = parseError(responseBodyString, response.code, response.message, "Send message failed")
+                    _isLoading.value = false
                 } else {
                     _error.value = parseError(responseBodyString, response.code, response.message, "Send message failed")
                     _isLoading.value = false
