@@ -107,7 +107,7 @@ class ChatViewModel : ViewModel() {
                     _liveKitToken.value = voiceSession.token
                     Timber.i { "LiveKit voice session created, token received for conversation $conversationId" }
                     _isActiveLoading.value = false
-                } else if (vsResponse.code == 400) {
+                } else if (vsResponse.code == 401) {
                     _isAuthExpired.value = true
                     _error.value = parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
                     _isLoading.value = false
@@ -181,7 +181,7 @@ class ChatViewModel : ViewModel() {
                     Timber.i { "New conversation created (ID: ${newConversation.id}). Signaling selection." }
                     onCreatedAndSelected(newConversation.id) // This callback should update TopLevelApp's activeConversationId
                     // setActiveConversation(newConversation.id) will be called due to state change in TopLevelApp
-                } else if (response.code == 400) {
+                } else if (response.code == 401) {
                     _isAuthExpired.value = true
                     _error.value = parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
                     _isLoading.value = false
@@ -263,7 +263,7 @@ class ChatViewModel : ViewModel() {
                 if (response.code == 200 && !responseBodyString.isNullOrEmpty()) {
                     val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
                     Timber.i { "Message sent (ID: ${newConversation.id})" }
-                } else if (response.code == 400) {
+                } else if (response.code == 401) {
                     _isAuthExpired.value = true
                     _error.value = parseError(responseBodyString, response.code, response.message, "Send message failed")
                     _isLoading.value = false

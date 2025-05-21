@@ -65,9 +65,9 @@ class MainActivity : ComponentActivity() {
     ) {
         Timber.i {"Load TopLevelApp"}
         Timber.i {"ViewModel instance in X: $chatViewModel"}
-        val tabs = listOf("Home", "Chat", "History", "Settings")
+        val tabs = listOf("Chat", "History", "Settings")
         val tabIcons = listOf(
-            Pair(R.drawable.ic_home, R.drawable.ic_home_filled),
+//            Pair(R.drawable.ic_home, R.drawable.ic_home_filled),
             Pair(R.drawable.ic_chat, R.drawable.ic_chat_filled),
             Pair(R.drawable.ic_log, R.drawable.ic_log_filled),
             Pair(R.drawable.ic_settings, R.drawable.ic_settings_filled),
@@ -83,8 +83,7 @@ class MainActivity : ComponentActivity() {
             // Content area
             Column(modifier = Modifier.fillMaxSize()) {
                 when (selectedTabIndex) {
-                    0 -> Home()
-                    1 -> NewChatScreen( // Chat Tab
+                    0 -> NewChatScreen( // Chat Tab
                         activeConversationIdFromTopLevel = activeConversationId,
                         setActiveConversationIdFromTopLevel = { convId ->
                             activeConversationId = convId
@@ -94,15 +93,15 @@ class MainActivity : ComponentActivity() {
                         setShowTabBar = { show -> showTabBar = show },
                         chatViewModel = chatViewModel
                     )
-                    2 -> HistoryScreen( // History Tab
+                    1 -> HistoryScreen( // History Tab
                         onSelectConversationAndNavigate = { conversationId ->
                             Timber.d { "History: Conversation $conversationId selected. Navigating to Chat." }
                             activeConversationId = conversationId
-                            selectedTabIndex = 1
+                            selectedTabIndex = 0
                         },
                         chatViewModel = chatViewModel
                     )
-                    3 -> SettingsScreen(chatViewModel = chatViewModel)
+                    2 -> SettingsScreen(chatViewModel = chatViewModel)
                 }
             }
 
