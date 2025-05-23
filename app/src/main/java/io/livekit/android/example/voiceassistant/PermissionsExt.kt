@@ -31,8 +31,8 @@ fun ComponentActivity.requireNeededPermissions(onPermissionsGranted: (() -> Unit
             }
 
             // If all granted, notify if needed.
-            if (onPermissionsGranted != null && grants.all { it.value }) {
-                onPermissionsGranted()
+            if (grants.all { it.value }) {
+                onPermissionsGranted?.invoke()
             }
         }
 

@@ -2,17 +2,23 @@ package io.livekit.android.example.voiceassistant.network
 
 import com.github.ajalt.timberkt.Timber
 import com.google.gson.Gson
+// TODO: IMPORTANT - Replace 'true' with 'io.livekit.android.example.voiceassistant.BuildConfig.DEBUG' once BuildConfig is correctly resolved.
+// import io.livekit.android.example.voiceassistant.BuildConfig 
 import io.livekit.android.example.voiceassistant.auth.AuthInterceptor
 import io.livekit.android.example.voiceassistant.auth.AuthManager
+import io.livekit.android.example.voiceassistant.auth.TokenRefreshAuthenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
-import io.livekit.android.example.voiceassistant.auth.TokenRefreshAuthenticator
 
 object NetworkClient {
 
     private const val TIMEOUT_SECONDS = 30L
-    private const val DEBUG = true
+    // API_BASE_URL needed for TokenRefreshAuthenticator, should be configurable
+    private const val API_BASE_URL = "https://medbot-backend.fly.dev" // TODO: Make this configurable
+
+    // TODO: Replace 'true' with 'BuildConfig.DEBUG' once BuildConfig is correctly resolved in your project.
+    private const val ENABLE_DEBUG_LOGGING = true 
 
     // Client for calls that DO NOT require authentication (e.g., login, register)
     val unauthenticatedClient: OkHttpClient by lazy {
@@ -21,13 +27,12 @@ object NetworkClient {
             .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .apply {
-                if (DEBUG) { // Only add detailed logging in debug builds
+                if (ENABLE_DEBUG_LOGGING) { 
                     val loggingInterceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
                         override fun log(message: String) {
-                            Timber.tag("OkHttp-Unauth").d(message) // Log with Timber
+                            Timber.tag("OkHttp-Unauth").d(message)
                         }
                     }).apply {
-                        // Log request and response lines and their respective headers and bodies (if present).
                         level = HttpLoggingInterceptor.Level.BODY
                     }
                     addInterceptor(loggingInterceptor)
@@ -38,16 +43,18 @@ object NetworkClient {
 
     // Client for calls that DO require authentication
     val authenticatedClient: OkHttpClient by lazy {
+        val gson = Gson() // Gson instance for the authenticator
         OkHttpClient.Builder()
             .connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .addInterceptor(AuthInterceptor(AuthManager)) // Your existing AuthInterceptor
+            .addInterceptor(AuthInterceptor(AuthManager))
+            .authenticator(TokenRefreshAuthenticator(AuthManager, API_BASE_URL, gson))
             .apply {
-                if (DEBUG) {
+                if (ENABLE_DEBUG_LOGGING) { 
                     val loggingInterceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
                         override fun log(message: String) {
-                            Timber.tag("OkHttp-Auth").d(message) // Different tag for clarity
+                            Timber.tag("OkHttp-Auth").d(message)
                         }
                     }).apply {
                         level = HttpLoggingInterceptor.Level.BODY

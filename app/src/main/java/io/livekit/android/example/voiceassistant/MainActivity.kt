@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun TopLevelApp(
         modifier: Modifier = Modifier,
-        chatViewModel: ChatViewModel = ChatViewModel()
+        chatViewModel: ChatViewModel
     ) {
         Timber.i {"Load TopLevelApp"}
         Timber.i {"ViewModel instance in X: $chatViewModel"}
@@ -145,10 +145,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    @Composable
-    fun Home() {
-
-    }
-
 }

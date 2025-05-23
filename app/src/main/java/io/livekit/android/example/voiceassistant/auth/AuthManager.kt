@@ -131,7 +131,8 @@ object AuthManager {
         }
     }
 
-    private suspend fun refreshAccessToken(
+    // Make this suspend function public to be called from SettingsViewModel
+    suspend fun refreshAccessToken(
         unauthenticatedClient: OkHttpClient,
         apiBaseUrl: String,
         gson: Gson

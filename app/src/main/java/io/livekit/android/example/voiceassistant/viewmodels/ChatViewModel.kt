@@ -5,22 +5,29 @@ import androidx.lifecycle.viewModelScope
 import com.github.ajalt.timberkt.Timber
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import io.livekit.android.example.voiceassistant.auth.AuthInterceptor
 import io.livekit.android.example.voiceassistant.auth.AuthManager
-import io.livekit.android.example.voiceassistant.data.* // Your API models
+import io.livekit.android.example.voiceassistant.data.Conversation
+import io.livekit.android.example.voiceassistant.data.CreateConversationRequest
+import io.livekit.android.example.voiceassistant.data.CreateMessageRequest
+import io.livekit.android.example.voiceassistant.data.CreateVoiceSessionRequest
+import io.livekit.android.example.voiceassistant.data.Message
+import io.livekit.android.example.voiceassistant.data.VoiceSessionResponse
 import io.livekit.android.example.voiceassistant.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
 
 class ChatViewModel : ViewModel() {
-    // !!! REPLACE WITH YOUR ACTUAL API BASE URL !!!
+    // TODO: Consider moving these to BuildConfig or a configuration file
     private val API_BASE_URL = "https://medbot-backend.fly.dev"
     val LIVEKIT_WS_URL = "wss://clinical-chatbot-1dewlazs.livekit.cloud"
 
@@ -36,17 +43,14 @@ class ChatViewModel : ViewModel() {
     private val _liveKitToken = MutableStateFlow<String?>(null)
     val liveKitToken: StateFlow<String?> = _liveKitToken.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _voiceSessionId = MutableStateFlow<String?>(null)
+    val voiceSessionId: StateFlow<String?> = _voiceSessionId.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false) // General loading for conversations/messages
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
-
-    private val _isActiveLoading = MutableStateFlow(false)
-    val isActiveLoading: StateFlow<Boolean> = _isActiveLoading.asStateFlow()
-
-    private val _isVoiceSessionLoading = MutableStateFlow(false)
-    val isVoiceSessionLoading: StateFlow<Boolean> = _isVoiceSessionLoading.asStateFlow()
 
     private val _isAuthExpired = MutableStateFlow(false)
     val isAuthExpired: StateFlow<Boolean> = _isAuthExpired.asStateFlow()
@@ -56,17 +60,12 @@ class ChatViewModel : ViewModel() {
         _isAuthExpired.value = isAuthExpired
     }
 
-    fun setIsActiveLoading(isLoading: Boolean) {
-        Timber.d { "Setting active loading to $isLoading." }
-        _isActiveLoading.value = isLoading
-    }
     val isLoggedIn: StateFlow<Boolean> = AuthManager.accessToken
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), AuthManager.isLoggedIn)
 
     fun setActiveConversation(conversationId: String?) {
         if (_currentConversationId.value == conversationId && conversationId != null) {
-            // If already loading/loaded this conversation and no error, don't re-trigger unless forced
             if (_liveKitToken.value != null && _error.value == null) {
                 Timber.d { "Conversation $conversationId already active and LiveKit token present." }
                 return
@@ -105,30 +104,65 @@ class ChatViewModel : ViewModel() {
                 if (vsResponse.isSuccessful && !vsResponseBodyString.isNullOrEmpty()) {
                     val voiceSession = gson.fromJson(vsResponseBodyString, VoiceSessionResponse::class.java)
                     _liveKitToken.value = voiceSession.token
-                    Timber.i { "LiveKit voice session created, token received for conversation $conversationId" }
-                    _isActiveLoading.value = false
+                    _voiceSessionId.value = voiceSession.id
+                    Timber.i { "LiveKit voice session (${voiceSession.id}) created, token received for conversation $conversationId" }
                 } else if (vsResponse.code == 401) {
                     _isAuthExpired.value = true
-                    _error.value = parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
-                    _isLoading.value = false
+                    _error.value = ViewModelUtils.parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
                 } else {
-                    _error.value = parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
-                    _isActiveLoading.value = false // Failed to get LK token, stop loading
+                    _error.value = ViewModelUtils.parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
                 }
             } catch (e: Exception) {
-                handleException(e, "Error while initialize voice session for $conversationId", "")
-                _isActiveLoading.value = false
+                ViewModelUtils.handleException(e, "Error while initialize voice session for $conversationId", "", _error)
+            } finally {
+                // Reserve for implementing loading mechanism
+            }
+        }
+    }
+
+    fun endVoiceSession() {
+        if (!AuthManager.isLoggedIn) {
+            _error.value = "Please log in to end voice chat."
+            resetChatState()
+            return
+        }
+        Timber.d { "End Voice Session (${_voiceSessionId.value}) for ID: ${_currentConversationId.value}" }
+        viewModelScope.launch {
+            _error.value = null
+
+            try {
+                val request = Request.Builder()
+                    .url("$API_BASE_URL/api/v1/voice/session/${_voiceSessionId.value}")
+                    .delete()
+                    .build()
+
+                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
+                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+
+                if (response.isSuccessful && !responseBodyString.isNullOrEmpty()) {
+                    _liveKitToken.value = null
+                    _voiceSessionId.value = null
+                    Timber.i { "LiveKit voice session (${_voiceSessionId.value}) Ended" }
+                } else if (response.code == 401) {
+                    _isAuthExpired.value = true
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Voice session creation failed")
+                } else {
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Voice session creation failed")
+                }
+            } catch (e: Exception) {
+                ViewModelUtils.handleException(e, "Error while initialize voice session for ${_currentConversationId.value}", "", _error)
+            } finally {
+                // Reserve for implementing loading mechanism
             }
         }
     }
 
     fun fetchMessages(conversationId: String, enableLoading: Boolean = false) {
         viewModelScope.launch {
-            // isLoading is managed by the caller (loadConversationAndInitSession)
-            // _error.value = null; // Don't clear potential voice session error
             if (enableLoading) {
                 _isLoading.value = true
             }
+            // _error.value = null; // Don't clear potential voice session error
 
             val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId/messages"
             Timber.d { "Fetching messages for $conversationId from $fullUrl" }
@@ -146,13 +180,15 @@ class ChatViewModel : ViewModel() {
                         _messages.value = emptyList()
                     }
                 } else {
-                    val fetchMsgError = parseError(responseBodyString, response.code, response.message, "Fetch messages failed")
+                    val fetchMsgError = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Fetch messages failed")
                     _error.value = _error.value?.let { "$it\n$fetchMsgError" } ?: fetchMsgError
                 }
             } catch (e: Exception) {
-                handleException(e, "fetch messages for $conversationId", fullUrl)
+                ViewModelUtils.handleException(e, "fetch messages for $conversationId", fullUrl, _error)
             } finally {
-                _isLoading.value = false // End of loading sequence
+                if (enableLoading) { // Only turn off general loading if it was turned on by this call
+                    _isLoading.value = false
+                }
             }
         }
     }
@@ -163,9 +199,11 @@ class ChatViewModel : ViewModel() {
             return
         }
         viewModelScope.launch {
-            _isLoading.value = true
             _error.value = null
-            resetChatState(keepLoading = true)
+            // Do not call resetChatState here, as it clears messages and token, which might not be desired
+            // until the new conversation is actually selected and active.
+            // The caller (UI) should manage navigation and then call setActiveConversation.
+
             val fullUrl = "$API_BASE_URL/api/v1/conversations/"
             Timber.d { "Creating new conversation via ChatVM: '$title' at $fullUrl" }
             try {
@@ -179,69 +217,20 @@ class ChatViewModel : ViewModel() {
                 if (response.code == 201 && !responseBodyString.isNullOrEmpty()) {
                     val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
                     Timber.i { "New conversation created (ID: ${newConversation.id}). Signaling selection." }
-                    onCreatedAndSelected(newConversation.id) // This callback should update TopLevelApp's activeConversationId
-                    // setActiveConversation(newConversation.id) will be called due to state change in TopLevelApp
+                    onCreatedAndSelected(newConversation.id)
                 } else if (response.code == 401) {
                     _isAuthExpired.value = true
-                    _error.value = parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
-                    _isLoading.value = false
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
                 } else {
-                    _error.value = parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
-                    _isLoading.value = false
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Create new conversation failed")
                 }
             } catch (e: Exception) {
-                handleException(e, "create new conversation", fullUrl)
-                _isLoading.value = false
+                ViewModelUtils.handleException(e, "create new conversation", fullUrl, _error)
+            } finally {
+                // Reserve for implementing loading mechanism
             }
         }
     }
-
-    fun clearError() {
-        _error.value = null
-    }
-
-    private fun resetChatState(keepLoading: Boolean = false) {
-        // _currentConversationId.value = null // This is controlled externally by setActiveConversation
-        _messages.value = emptyList()
-        _liveKitToken.value = null
-        if(!keepLoading) _isLoading.value = false
-        // Don't clear error here as it might be useful feedback before reset
-    }
-
-    private fun handleException(e: Exception, operation: String, url: String) {
-        // (Similar to SettingsViewModel's handleException)
-        when (e) {
-            is IOException -> {
-                Timber.e(e) { "Network error during $operation from $url" }
-                _error.value = "Network error: ${e.localizedMessage ?: "Check connection."}"
-            }
-            is com.google.gson.JsonSyntaxException -> {
-                Timber.e(e) { "JSON parsing error during $operation from $url" }
-                _error.value = "Error parsing server response."
-            }
-            else -> {
-                Timber.e(e) { "Unexpected error during $operation from $url" }
-                _error.value = "An unexpected error occurred: ${e.localizedMessage}"
-            }
-        }
-    }
-
-    private fun parseError(body: String?, code: Int, httpMessage: String, context: String = "Operation failed"): String {
-        // (Similar to SettingsViewModel's parseError)
-        return if (!body.isNullOrEmpty()) {
-            try {
-                gson.fromJson(body, ApiError::class.java)?.let { apiError ->
-                    apiError.message ?: apiError.detail ?: apiError.error ?: apiError.errors?.joinToString() ?: "$context (Code: $code)"
-                } ?: "$context: $httpMessage (Code: $code)"
-            } catch (e: Exception) {
-                "$context: Invalid error format (Code: $code). Details: $httpMessage"
-            }
-        } else {
-            "$context: $httpMessage (Code: $code)"
-        }
-    }
-
-    // TODO: Implement sendMessage(conversationId, messageContent)
 
     fun sendMessage(conversationId: String, role: String, messageContent: String) {
         if (!AuthManager.isLoggedIn) {
@@ -249,6 +238,9 @@ class ChatViewModel : ViewModel() {
             return
         }
         viewModelScope.launch {
+            // _isLoading can be used here if sending a message should show a general loading indicator
+            // For now, assuming sending is quick or has its own UI feedback.
+            // If a dedicated loading state for sending is needed, a new StateFlow could be added.
             _error.value = null
             val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId/messages"
             Timber.d { "Send Messages to Conversation" }
@@ -260,21 +252,33 @@ class ChatViewModel : ViewModel() {
                 val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
                 val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
 
-                if (response.code == 200 && !responseBodyString.isNullOrEmpty()) {
-                    val newConversation = gson.fromJson(responseBodyString, Conversation::class.java)
-                    Timber.i { "Message sent (ID: ${newConversation.id})" }
+                if (response.isSuccessful && !responseBodyString.isNullOrEmpty()) { // Check for isSuccessful()
+                    // Assuming the response is the sent message or updated conversation.
+                    // For now, just log success. Consider updating _messages or fetching new messages.
+                    val sentMessageConfirmation = gson.fromJson(responseBodyString, Message::class.java) // Or appropriate response type
+                    Timber.i { "Message sent successfully (Confirmed ID: ${sentMessageConfirmation.id})" }
+                    // Potentially fetch messages again to update the list:
+                    // fetchMessages(conversationId)
                 } else if (response.code == 401) {
                     _isAuthExpired.value = true
-                    _error.value = parseError(responseBodyString, response.code, response.message, "Send message failed")
-                    _isLoading.value = false
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Send message failed")
                 } else {
-                    _error.value = parseError(responseBodyString, response.code, response.message, "Send message failed")
-                    _isLoading.value = false
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Send message failed")
                 }
             } catch (e: Exception) {
-                handleException(e, "send message", fullUrl)
-                _isLoading.value = false
+                ViewModelUtils.handleException(e, "send message", fullUrl, _error)
+            } finally {
+                // If a general isLoading was true for sending, set it to false here.
             }
         }
+    }
+
+    private fun resetChatState(keepLoading: Boolean = false) {
+        _messages.value = emptyList()
+        _liveKitToken.value = null
+        if(!keepLoading) {
+            _isLoading.value = false
+        }
+        // Don't clear error here as it might be useful feedback before reset
     }
 }

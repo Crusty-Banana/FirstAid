@@ -22,7 +22,7 @@ import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    chatViewModel: ChatViewModel = ChatViewModel(),
+    chatViewModel: ChatViewModel,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
     val isLoading by settingsViewModel.isLoading.collectAsState()
@@ -113,7 +113,7 @@ fun SettingsScreen(
                         onValueChange = { firstNameInput = it },
                         label = { Text("First Name") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))

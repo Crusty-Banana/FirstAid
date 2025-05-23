@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.github.ajalt.timberkt.Timber
 import com.google.gson.Gson
 import io.livekit.android.example.voiceassistant.auth.AuthManager
-import io.livekit.android.example.voiceassistant.data.* // Import all from ApiModels
+import io.livekit.android.example.voiceassistant.data.LoginRequest
+import io.livekit.android.example.voiceassistant.data.LoginResponse
+import io.livekit.android.example.voiceassistant.data.RegisterRequest
+import io.livekit.android.example.voiceassistant.data.UserProfileResponse
 import io.livekit.android.example.voiceassistant.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,17 +17,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
 
 class SettingsViewModel : ViewModel() {
 
-    // !!! REPLACE WITH YOUR ACTUAL API BASE URL !!!
+    // TODO: Consider moving this to BuildConfig or a configuration file
     private val API_BASE_URL = "https://medbot-backend.fly.dev"
 
-    private val httpClient = OkHttpClient() // For a real app, inject or share this client
+    // Using NetworkClient for consistency and shared configuration
+    private val unauthHttpClient = NetworkClient.unauthenticatedClient
+    private val authHttpClient = NetworkClient.authenticatedClient
     private val gson = Gson()
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
@@ -40,9 +43,6 @@ class SettingsViewModel : ViewModel() {
     // Observe AuthManager for login state changes
     val accessToken: StateFlow<String?> = AuthManager.accessToken
     val loggedInUserEmail: StateFlow<String?> = AuthManager.loggedInUserEmail
-
-    private val unauthHttpClient = NetworkClient.unauthenticatedClient
-    private val authHttpClient = NetworkClient.authenticatedClient
 
     fun login(email: String, password: String) {
         viewModelScope.launch {
@@ -73,10 +73,10 @@ class SettingsViewModel : ViewModel() {
                         _operationError.value = "Login successful but received an empty response."
                     }
                 } else {
-                    _operationError.value = parseError(responseBodyString, response.code, response.message)
+                    _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message)
                 }
             } catch (e: Exception) {
-                handleException(e, "login", fullUrl)
+                ViewModelUtils.handleException(e, "login", fullUrl, _operationError)
             } finally {
                 _isLoading.value = false
             }
@@ -109,10 +109,10 @@ class SettingsViewModel : ViewModel() {
                         _operationError.value = "Registration successful but no user data returned."
                     }
                 } else {
-                    _operationError.value = parseError(responseBodyString, response.code, response.message, "Registration failed")
+                    _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Registration failed")
                 }
             } catch (e: Exception) {
-                handleException(e, "registration", fullUrl)
+                ViewModelUtils.handleException(e, "registration", fullUrl, _operationError)
             } finally {
                 _isLoading.value = false
             }
@@ -121,7 +121,7 @@ class SettingsViewModel : ViewModel() {
 
     fun logout() {
         viewModelScope.launch {
-            val token = AuthManager.getAccessTokenValue()
+            val token = AuthManager.getAccessTokenValue() // Still needed for the check, but not for header
             if (token == null) {
                 _operationError.value = "Not logged in."
                 return@launch
@@ -131,9 +131,9 @@ class SettingsViewModel : ViewModel() {
             val fullUrl = "$API_BASE_URL/api/v1/auth/logout"
             Timber.d { "Attempting logout from $fullUrl" }
             try {
-                val requestBody = "".toRequestBody(jsonMediaType)
-                val request = Request.Builder().url(fullUrl).post(requestBody)
-                    .addHeader("Authorization", "Bearer $token").build()
+                val requestBody = "".toRequestBody(jsonMediaType) // Empty body for logout as per existing logic
+                // Rely on AuthInterceptor in authHttpClient to add the token
+                val request = Request.Builder().url(fullUrl).post(requestBody).build()
                 val response = withContext(Dispatchers.IO) { authHttpClient.newCall(request).execute() }
                 val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
 
@@ -141,11 +141,11 @@ class SettingsViewModel : ViewModel() {
                     Timber.i { "Logout successful." }
                     AuthManager.logoutUser()
                 } else {
-                    _operationError.value = parseError(responseBodyString, response.code, response.message, "Logout failed")
+                    _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Logout failed")
                     if (response.code == 401) AuthManager.logoutUser() // Token likely invalid
                 }
             } catch (e: Exception) {
-                handleException(e, "logout", fullUrl)
+                ViewModelUtils.handleException(e, "logout", fullUrl, _operationError)
             } finally {
                 _isLoading.value = false
             }
@@ -154,43 +154,33 @@ class SettingsViewModel : ViewModel() {
 
     fun refreshAccessToken() {
         viewModelScope.launch {
-            val refreshToken = AuthManager.getRefreshTokenValue()
-            if (refreshToken == null) {
-                _operationError.value = "No refresh token"
-                return@launch
-            }
-
             _isLoading.value = true
             _operationError.value = null
-            val fullUrl = "$API_BASE_URL/api/v1/auth/refresh"
-            val newUrlWithQuery = "$fullUrl?refresh_token=$refreshToken"
-
-            Timber.d { "Attempting to refresh access token from $fullUrl" }
+            Timber.d { "Attempting to refresh access token via AuthManager." }
             try {
-//                val refreshRequest = RefreshTokenRequest(refreshToken)
-//                val requestBodyJson = gson.toJson(refreshRequest)
-//                val requestBody = requestBodyJson.toRequestBody(jsonMediaType)
-                val emptyJsonBody = "{}".toRequestBody(jsonMediaType)
-                val request = Request.Builder().url(newUrlWithQuery).post(emptyJsonBody).build()
+                val success = AuthManager.refreshAccessToken(
+                    unauthHttpClient, // Pass the unauthenticated client
+                    API_BASE_URL,     // Pass the API base URL
+                    gson              // Pass the Gson instance
+                )
 
-                val response = withContext(Dispatchers.IO) { unauthHttpClient.newCall(request).execute() }
-                val responseBodyString = withContext(Dispatchers.IO) { response.body.string() }
-
-                if (response.isSuccessful) {
-                    if (responseBodyString.isNotEmpty()) {
-                        val refreshTokenResponse = gson.fromJson(responseBodyString, RefreshTokenResponse::class.java)
-                        AuthManager.refreshToken(
-                            refreshTokenResponse.access_token,
-                            refreshTokenResponse.refresh_token
-                        )
-                    } else {
-                        _operationError.value = "Refresh successful but return empty response."
-                    }
+                if (success) {
+                    Timber.i { "SettingsViewModel: Token refresh successful via AuthManager." }
+                    // Optionally, trigger UI updates or clear specific errors if needed
                 } else {
-                    _operationError.value = parseError(responseBodyString, response.code, response.message)
+                    Timber.w { "SettingsViewModel: Token refresh failed via AuthManager." }
+                    // AuthManager's refreshAccessToken should handle logging out on critical failures.
+                    // _operationError might already be set by AuthManager or its internal error handling if it modifies a shared state,
+                    // or you can set a generic error here if AuthManager doesn't expose it directly.
+                    // For now, assume AuthManager handles its own error state or logout.
+                    // If a specific error message is needed here, it could be:
+                    // _operationError.value = "Failed to refresh token. Please try logging in again."
                 }
             } catch (e: Exception) {
-                handleException(e, "refresh token", fullUrl)
+                // This catch block might be redundant if AuthManager.refreshAccessToken handles all its exceptions.
+                // However, keeping it for safety in case AuthManager.refreshAccessToken throws an unexpected exception directly.
+                Timber.e(e) { "SettingsViewModel: Exception during AuthManager.refreshAccessToken call." }
+                _operationError.value = "An unexpected error occurred during token refresh: ${e.localizedMessage}"
             } finally {
                 _isLoading.value = false
             }
@@ -200,36 +190,5 @@ class SettingsViewModel : ViewModel() {
     fun clearErrorAndStatus() {
         _operationError.value = null
         _registrationStatus.value = null
-    }
-
-    private fun handleException(e: Exception, operation: String, url: String) {
-        when (e) {
-            is IOException -> {
-                Timber.e(e) { "Network error during $operation to $url" }
-                _operationError.value = "Network error: ${e.localizedMessage ?: "Check connection."}"
-            }
-            is com.google.gson.JsonSyntaxException -> {
-                Timber.e(e) { "JSON parsing error during $operation from $url" }
-                _operationError.value = "Error parsing server response."
-            }
-            else -> {
-                Timber.e(e) { "Unexpected error during $operation to $url" }
-                _operationError.value = "An unexpected error occurred: ${e.localizedMessage}"
-            }
-        }
-    }
-
-    private fun parseError(body: String?, code: Int, httpMessage: String, context: String = "Operation failed"): String {
-        return if (!body.isNullOrEmpty()) {
-            try {
-                gson.fromJson(body, ApiError::class.java)?.let { apiError ->
-                    apiError.message ?: apiError.detail ?: apiError.error ?: apiError.errors?.joinToString() ?: "$context (Code: $code)"
-                } ?: "$context: $httpMessage (Code: $code)"
-            } catch (e: Exception) {
-                "$context: Invalid error format (Code: $code). Details: $httpMessage"
-            }
-        } else {
-            "$context: $httpMessage (Code: $code)"
-        }
     }
 }

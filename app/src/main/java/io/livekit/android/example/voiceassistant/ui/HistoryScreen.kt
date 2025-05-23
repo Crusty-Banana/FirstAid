@@ -16,14 +16,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.livekit.android.example.voiceassistant.data.Conversation
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.HistoryViewModel
-import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    chatViewModel: ChatViewModel = ChatViewModel(),
-    historyViewModel: HistoryViewModel = HistoryViewModel(),
-    onSelectConversationAndNavigate: (conversationId: String) -> Unit // Combines selection and navigation trigger
+    chatViewModel: ChatViewModel,
+    historyViewModel: HistoryViewModel = viewModel(),
+    onSelectConversationAndNavigate: (conversationId: String) -> Unit
 ) {
     val conversations by historyViewModel.conversations.collectAsState()
     val isLoading by historyViewModel.isLoading.collectAsState()
@@ -40,12 +39,6 @@ fun HistoryScreen(
         } else {
             // Clear conversations if user logs out while on this screen (or navigates away and back)
             // historyViewModel.clearConversations() // Add this method to ViewModel if needed
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        historyViewModel.newlyCreatedConversationId.collectLatest { conversationId ->
-            onSelectConversationAndNavigate(conversationId)
         }
     }
 
@@ -124,7 +117,6 @@ fun HistoryScreen(
                             onValueChange = { newConversationTitle = it },
                             label = { Text("Conversation Title") },
                             singleLine = true,
-                            isError = newConversationTitle.isBlank() && newConversationTitle.isNotEmpty() // Example validation
                         )
                     },
                     confirmButton = {

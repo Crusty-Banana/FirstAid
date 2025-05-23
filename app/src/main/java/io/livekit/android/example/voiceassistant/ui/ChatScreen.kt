@@ -4,39 +4,57 @@ import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester.Companion.createRefs
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.ajalt.timberkt.Timber
 import io.livekit.android.annotations.Beta
 import io.livekit.android.compose.local.RoomScope
-import io.livekit.android.compose.state.VoiceAssistant
 import io.livekit.android.compose.state.rememberVoiceAssistant
 import io.livekit.android.compose.state.transcriptions.rememberParticipantTranscriptions
 import io.livekit.android.compose.state.transcriptions.rememberTranscriptions
 import io.livekit.android.compose.ui.audio.VoiceAssistantBarVisualizer
-import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
-import io.livekit.android.example.voiceassistant.data.Message // Import Message
-import io.livekit.android.room.Room
-import io.livekit.android.room.types.TranscriptionSegment
 import io.livekit.android.example.voiceassistant.R
+import io.livekit.android.example.voiceassistant.data.Message
+import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 
 fun useSpeakerMode(context: Context) {
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -174,6 +192,7 @@ fun VoiceChatScreen(
                 Button(
                     onClick = {
                         room.disconnect()
+                        chatViewModel.endVoiceSession()
                         chatViewModel.fetchMessages(activeConversationIdFromTopLevel, enableLoading = true)
                         setShowVoiceChat(false)
                         setShowTabBar(true)
@@ -263,7 +282,7 @@ fun NewChatScreen(
         modifier = Modifier
             .padding(bottom = 25.dp),
         floatingActionButton = {
-            if (!showVoiceChat) {
+            if (!showVoiceChat && isLoggedIn) {
                 OpenVoiceChatButton(
                     activeConversationIdFromTopLevel = activeConversationIdFromTopLevel,
                     setActiveConversationIdFromTopLevel = setActiveConversationIdFromTopLevel,
@@ -275,8 +294,16 @@ fun NewChatScreen(
         },
         content = { paddingValues ->
             if (!isLoggedIn) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Please log in via Settings to use Chat.", style = MaterialTheme.typography.bodyLarge)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp, vertical = 8.dp), // Adjusted padding
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Please log in via Settings to use Chat.", style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             } else if (isAuthExpired) {
                 setShowTabBar(true)
@@ -302,12 +329,15 @@ fun NewChatScreen(
                             }
                         } else {
                             Timber.i {"ELSE. url: $liveKitUrl\n token: $liveKitToken\n activeConversationIdFromTopLevel:$activeConversationIdFromTopLevel" }
+                            // Safe call using let
+                            val currentToken = liveKitToken!!
+                            val currentConversationId = activeConversationIdFromTopLevel
                             VoiceChatScreen(
                                 url = liveKitUrl,
-                                token = liveKitToken!!,
+                                token = currentToken,
                                 setShowVoiceChat = { showVoiceChat = it },
                                 setShowTabBar = setShowTabBar,
-                                activeConversationIdFromTopLevel = activeConversationIdFromTopLevel!!,
+                                activeConversationIdFromTopLevel = currentConversationId,
                                 modifier = Modifier.fillMaxSize(),
                                 chatViewModel = chatViewModel
                             )
