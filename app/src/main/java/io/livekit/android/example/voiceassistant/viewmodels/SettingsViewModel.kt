@@ -9,6 +9,8 @@ import io.livekit.android.example.voiceassistant.data.LoginRequest
 import io.livekit.android.example.voiceassistant.data.LoginResponse
 import io.livekit.android.example.voiceassistant.data.RegisterRequest
 import io.livekit.android.example.voiceassistant.data.UserProfileResponse
+import io.livekit.android.example.voiceassistant.data.UserProfile
+import io.livekit.android.example.voiceassistant.data.UpdateUserProfileRequest
 import io.livekit.android.example.voiceassistant.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +46,9 @@ class SettingsViewModel : ViewModel() {
     val accessToken: StateFlow<String?> = AuthManager.accessToken
     val loggedInUserEmail: StateFlow<String?> = AuthManager.loggedInUserEmail
 
+    private val _userProfile = MutableStateFlow<UserProfile?>(null)
+    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
+
     fun login(email: String, password: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -69,6 +74,7 @@ class SettingsViewModel : ViewModel() {
                             loginResponse.refresh_token,
                             email
                         )
+                        fetchUserProfile() // Fetch profile on login
                     } else {
                         _operationError.value = "Login successful but received an empty response."
                     }
@@ -140,6 +146,7 @@ class SettingsViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     Timber.i { "Logout successful." }
                     AuthManager.logoutUser()
+                    _userProfile.value = null // Clear profile on logout
                 } else {
                     _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Logout failed")
                     if (response.code == 401) AuthManager.logoutUser() // Token likely invalid
@@ -190,5 +197,79 @@ class SettingsViewModel : ViewModel() {
     fun clearErrorAndStatus() {
         _operationError.value = null
         _registrationStatus.value = null
+    }
+
+    fun fetchUserProfile() {
+        viewModelScope.launch {
+            if (AuthManager.getAccessTokenValue() == null) {
+                _operationError.value = "Not logged in."
+                return@launch
+            }
+            _isLoading.value = true
+            _operationError.value = null
+            val fullUrl = "$API_BASE_URL/api/v1/profile/"
+            Timber.d { "Fetching user profile from $fullUrl" }
+
+            try {
+                val request = Request.Builder().url(fullUrl).get().build()
+                val response = withContext(Dispatchers.IO) { authHttpClient.newCall(request).execute() }
+                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+
+                if (response.isSuccessful && !responseBodyString.isNullOrEmpty()) {
+                    _userProfile.value = gson.fromJson(responseBodyString, UserProfile::class.java)
+                } else {
+                    _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Failed to fetch profile")
+                    if (response.code == 401) AuthManager.logoutUser() // Token likely invalid
+                }
+            } catch (e: Exception) {
+                ViewModelUtils.handleException(e, "fetchUserProfile", fullUrl, _operationError)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateUserProfile(firstName: String, lastName: String, dateOfBirth: String) {
+        viewModelScope.launch {
+            if (AuthManager.getAccessTokenValue() == null) {
+                _operationError.value = "Not logged in."
+                return@launch
+            }
+            _isLoading.value = true
+            _operationError.value = null
+            val fullUrl = "$API_BASE_URL/api/v1/profile/"
+            Timber.d { "Updating user profile to $fullUrl" }
+
+            try {
+                val updateRequest = UpdateUserProfileRequest(
+                    first_name = firstName.takeIf { it.isNotBlank() && it != _userProfile.value?.first_name },
+                    last_name = lastName.takeIf { it.isNotBlank() && it != _userProfile.value?.last_name },
+                    date_of_birth = dateOfBirth.takeIf { it.isNotBlank() && it != _userProfile.value?.date_of_birth }
+                )
+                // Only send request if there is something to update
+                if (updateRequest.first_name == null && updateRequest.last_name == null && updateRequest.date_of_birth == null) {
+                    Timber.d { "No changes detected in profile, skipping update." }
+                    _isLoading.value = false
+                    return@launch
+                }
+
+                val requestBodyJson = gson.toJson(updateRequest)
+                val requestBody = requestBodyJson.toRequestBody(jsonMediaType)
+                val request = Request.Builder().url(fullUrl).put(requestBody).build()
+                val response = withContext(Dispatchers.IO) { authHttpClient.newCall(request).execute() }
+                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+
+                if (response.isSuccessful && !responseBodyString.isNullOrEmpty()) {
+                    _userProfile.value = gson.fromJson(responseBodyString, UserProfile::class.java)
+                } else {
+                    _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Failed to update profile")
+                     if (response.code == 401) AuthManager.logoutUser()
+                }
+            } catch (e: Exception) {
+                ViewModelUtils.handleException(e, "updateUserProfile", fullUrl, _operationError)
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 }

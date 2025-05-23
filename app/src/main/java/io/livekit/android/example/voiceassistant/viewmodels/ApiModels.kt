@@ -46,6 +46,34 @@ data class RefreshTokenResponse(
     val expires_in: Int? = null
 )
 
+// --- User Profile Models ---
+data class UserProfile(
+    val id: String,
+    val first_name: String,
+    val last_name: String,
+    val date_of_birth: String,
+//    val medical_history_id: String,
+//    val preferences: UserPreferences,
+    val created_at: String,
+    val updated_at: String
+)
+
+//data class UserPreferences(
+//    val theme: String,
+//    val notifications_enabled: Boolean
+//)
+
+data class UpdateUserProfileRequest(
+    val first_name: String? = null,
+    val last_name: String? = null,
+    val date_of_birth: String? = null
+)
+
+//data class UpdateUserPreferencesRequest(
+//    val theme: String? = null,
+//    val notifications_enabled: Boolean? = null
+//)
+
 // --- Conversation Models ---
 data class Conversation(
     val id: String,

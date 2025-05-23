@@ -38,6 +38,7 @@ import io.livekit.android.example.voiceassistant.ui.NewChatScreen
 import io.livekit.android.example.voiceassistant.ui.SettingsScreen
 import io.livekit.android.example.voiceassistant.ui.theme.LiveKitVoiceAssistantExampleTheme
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
+import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 import io.livekit.android.util.LoggingLevel
 
 class MainActivity : ComponentActivity() {
@@ -46,12 +47,17 @@ class MainActivity : ComponentActivity() {
         LiveKit.loggingLevel = LoggingLevel.DEBUG
 
         val chatViewModel = ChatViewModel()
+        val settingsViewModel = SettingsViewModel()
+
+        settingsViewModel.fetchUserProfile()
+
         requireNeededPermissions {
             setContent {
                 LiveKitVoiceAssistantExampleTheme {
                     TopLevelApp(
                         modifier = Modifier.fillMaxSize(),
-                        chatViewModel = chatViewModel
+                        chatViewModel = chatViewModel,
+                        settingsViewModel = settingsViewModel,
                     )
                 }
             }
@@ -61,7 +67,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun TopLevelApp(
         modifier: Modifier = Modifier,
-        chatViewModel: ChatViewModel
+        chatViewModel: ChatViewModel,
+        settingsViewModel: SettingsViewModel
     ) {
         Timber.i {"Load TopLevelApp"}
         Timber.i {"ViewModel instance in X: $chatViewModel"}
@@ -91,7 +98,8 @@ class MainActivity : ComponentActivity() {
                             // it's already on the ChatScreen. No tab switch needed here.
                         },
                         setShowTabBar = { show -> showTabBar = show },
-                        chatViewModel = chatViewModel
+                        chatViewModel = chatViewModel,
+                        settingsViewModel = settingsViewModel
                     )
                     1 -> HistoryScreen( // History Tab
                         onSelectConversationAndNavigate = { conversationId ->
@@ -101,7 +109,7 @@ class MainActivity : ComponentActivity() {
                         },
                         chatViewModel = chatViewModel
                     )
-                    2 -> SettingsScreen(chatViewModel = chatViewModel)
+                    2 -> SettingsScreen(chatViewModel = chatViewModel, settingsViewModel = settingsViewModel)
                 }
             }
 

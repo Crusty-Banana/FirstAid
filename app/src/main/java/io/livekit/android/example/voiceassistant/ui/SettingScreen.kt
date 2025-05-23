@@ -23,13 +23,14 @@ import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 @Composable
 fun SettingsScreen(
     chatViewModel: ChatViewModel,
-    settingsViewModel: SettingsViewModel = viewModel()
+    settingsViewModel: SettingsViewModel
 ) {
     val isLoading by settingsViewModel.isLoading.collectAsState()
     val operationError by settingsViewModel.operationError.collectAsState()
     val loggedInUserEmail by settingsViewModel.loggedInUserEmail.collectAsState()
     val accessToken by settingsViewModel.accessToken.collectAsState()
     val registrationStatus by settingsViewModel.registrationStatus.collectAsState()
+    val userProfile by settingsViewModel.userProfile.collectAsState()
 
     var uiMode by rememberSaveable { mutableStateOf("Login") } // "Login" or "Register"
 
@@ -39,9 +40,26 @@ fun SettingsScreen(
     var lastNameInput by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
-    // Clear errors/statuses when switching mode
-    LaunchedEffect(uiMode) {
+    // Profile edit states
+    var editFirstName by rememberSaveable { mutableStateOf("") }
+    var editLastName by rememberSaveable { mutableStateOf("") }
+    var editDateOfBirth by rememberSaveable { mutableStateOf("") }
+
+    // Populate edit fields when profile is loaded or changes
+    LaunchedEffect(userProfile) {
+        userProfile?.let {
+            editFirstName = it.first_name
+            editLastName = it.last_name
+            editDateOfBirth = it.date_of_birth
+        }
+    }
+
+    // Clear errors/statuses when switching mode or when user logs in/out
+    LaunchedEffect(uiMode, accessToken) {
         settingsViewModel.clearErrorAndStatus()
+        if (accessToken != null && uiMode == "Login") { // If user just logged in
+            settingsViewModel.fetchUserProfile() // Fetch profile right after login
+        }
     }
 
     Box(
@@ -180,8 +198,49 @@ fun SettingsScreen(
                 Text("User Profile", style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Email: ${loggedInUserEmail ?: "N/A"}", style = MaterialTheme.typography.bodyLarge)
-                // You could add First Name / Last Name here if AuthManager stored them
-                // after a successful /me call post-login, or from JWT.
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Profile Information Section
+                Text("Profile Information", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = editFirstName,
+                    onValueChange = { editFirstName = it },
+                    label = { Text("First Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = editLastName,
+                    onValueChange = { editLastName = it },
+                    label = { Text("Last Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = editDateOfBirth,
+                    onValueChange = { editDateOfBirth = it },
+                    label = { Text("Date of Birth (YYYY-MM-DD)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        settingsViewModel.updateUserProfile(editFirstName, editLastName, editDateOfBirth)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = isLoading.not() && (editFirstName != userProfile?.first_name || editLastName != userProfile?.last_name || editDateOfBirth != userProfile?.date_of_birth)
+                ) { Text("Update Profile") }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 if (isLoading) {

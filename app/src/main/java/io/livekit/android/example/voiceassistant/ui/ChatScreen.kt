@@ -55,6 +55,7 @@ import io.livekit.android.compose.ui.audio.VoiceAssistantBarVisualizer
 import io.livekit.android.example.voiceassistant.R
 import io.livekit.android.example.voiceassistant.data.Message
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
+import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 
 fun useSpeakerMode(context: Context) {
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -216,12 +217,14 @@ fun VoiceChatScreen(
 
 @Composable
 fun ChatMessageScreen(
-    chatViewModel: ChatViewModel = ChatViewModel()
+    chatViewModel: ChatViewModel = ChatViewModel(),
+    settingsViewModel: SettingsViewModel = SettingsViewModel()
 ) {
     Timber.i {"Load ChatMessageScreen"}
     Timber.i {"ViewModel instance in X: $chatViewModel"}
     val lazyListState = rememberLazyListState()
     val messages by chatViewModel.messages.collectAsState()
+    val userProfile by settingsViewModel.userProfile.collectAsState()
 
     LaunchedEffect(messages.size) {
         if (messages.lastOrNull() != null) {
@@ -233,7 +236,7 @@ fun ChatMessageScreen(
         if (messages.isEmpty()) {
             Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Text(
-                    "No messages yet. Click voice button to start.",
+                    "Hello ${userProfile?.first_name}. Click voice button to start.",
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -258,7 +261,8 @@ fun NewChatScreen(
     activeConversationIdFromTopLevel: String?, // Renamed to avoid conflict with local var
     setActiveConversationIdFromTopLevel: (String?) -> Unit, // Callback to TopLevelApp
     setShowTabBar: (Boolean) -> Unit,
-    chatViewModel: ChatViewModel = viewModel()
+    chatViewModel: ChatViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     Timber.i {"Load NewChatScreen"}
     Timber.i {"ViewModel instance in X: $chatViewModel"}
@@ -349,7 +353,7 @@ fun NewChatScreen(
                                 Text("Loading chat messages...", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top=8.dp))
                             }
                         } else {
-                            ChatMessageScreen(chatViewModel = chatViewModel)
+                            ChatMessageScreen(chatViewModel = chatViewModel, settingsViewModel = settingsViewModel)
                         }
                     }
                 }
