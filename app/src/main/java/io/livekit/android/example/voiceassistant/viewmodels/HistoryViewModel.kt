@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -38,6 +39,44 @@ class HistoryViewModel : ViewModel() {
     val isLoggedIn: StateFlow<Boolean> = AuthManager.accessToken
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AuthManager.isLoggedIn)
+
+    private fun removeConversationById(conversationId: String) {
+        _conversations.update { currentList ->
+            currentList.filterNot { it.id == conversationId }
+        }
+    }
+
+    fun deleteConversation(conversationId: String) {
+        if (!AuthManager.isLoggedIn) {
+            _error.value = "Please log in to delete conversations."
+            return
+        }
+
+        viewModelScope.launch {
+//            _isLoading.value = true // Optional: Show loading state during deletion
+            _error.value = null
+            removeConversationById(conversationId)
+            val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId"
+            Timber.d { "Deleting conversation from $fullUrl" }
+            try {
+                val request = Request.Builder().url(fullUrl).delete().build()
+                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
+
+                if (response.isSuccessful) {
+                    Timber.i { "Successfully deleted conversation $conversationId" }
+                    // Refresh the conversation list after deletion
+                    // fetchConversations()
+                } else {
+                    val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Delete conversation failed")
+                }
+            } catch (e: Exception) {
+                ViewModelUtils.handleException(e, "delete conversation", fullUrl, _error)
+            } finally {
+                //isLoading.value = false // Optional: Hide loading state
+            }
+        }
+    }
 
     fun fetchConversations() {
         if (!AuthManager.isLoggedIn) {

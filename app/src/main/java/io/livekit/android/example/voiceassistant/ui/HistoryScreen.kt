@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -97,9 +98,15 @@ fun HistoryScreen(
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxSize()) {
                             items(conversations, key = { it.id }) { conversation ->
-                                ConversationHistoryItem(conversation) {
-                                    onSelectConversationAndNavigate(conversation.id)
-                                }
+                                ConversationHistoryItem(
+                                    conversation = conversation,
+                                    onClick = {
+                                        onSelectConversationAndNavigate(conversation.id)
+                                    },
+                                    onDelete = {
+                                        historyViewModel.deleteConversation(conversation.id)
+                                    }
+                                )
                                 Divider()
                             }
                         }
@@ -143,10 +150,23 @@ fun HistoryScreen(
 }
 
 @Composable
-fun ConversationHistoryItem(conversation: Conversation, onClick: () -> Unit) {
+fun ConversationHistoryItem(
+    conversation: Conversation,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
     ListItem(
         headlineContent = { Text(conversation.title.ifBlank { "(Untitled Conversation)" }, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text("Last updated: ${conversation.updated_at}", style = MaterialTheme.typography.bodySmall) },
+        trailingContent = {
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Delete conversation",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        },
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
