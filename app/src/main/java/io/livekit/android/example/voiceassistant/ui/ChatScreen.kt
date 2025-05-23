@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -28,7 +32,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +61,7 @@ import io.livekit.android.compose.ui.audio.VoiceAssistantBarVisualizer
 import io.livekit.android.example.voiceassistant.R
 import io.livekit.android.example.voiceassistant.data.Message
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
+import io.livekit.android.example.voiceassistant.viewmodels.HistoryViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 
 fun useSpeakerMode(context: Context) {
@@ -81,9 +88,10 @@ fun useSpeakerMode(context: Context) {
 fun OpenVoiceChatButton(
     activeConversationIdFromTopLevel: String?,
     setActiveConversationIdFromTopLevel: (String?) -> Unit,
+    activeConversationTitleFromTopLevel: String,
     setShowVoiceChat: (Boolean) -> Unit,
     setShowTabBar: (Boolean) -> Unit,
-    chatViewModel: ChatViewModel = viewModel()
+    chatViewModel: ChatViewModel
 ) {
     Timber.i {"Load OpenVoiceChatButton"}
     Timber.i {"ViewModel instance in X: $chatViewModel"}
@@ -94,12 +102,28 @@ fun OpenVoiceChatButton(
         setShowVoiceChat(true)
         useSpeakerMode(context)
         if (activeConversationIdFromTopLevel == null) {
-            chatViewModel.createNewConversationAndSelect("new chat") { newConvId ->
+            chatViewModel.createNewConversationAndSelect(activeConversationTitleFromTopLevel) { newConvId ->
                 setActiveConversationIdFromTopLevel(newConvId)
-                chatViewModel.initVoiceSession(newConvId)
+                chatViewModel.initVoiceSession(
+                    newConvId,
+                    onFailed = {
+                        setShowTabBar(true)
+                        setShowVoiceChat(false)
+                        Toast.makeText(context, "Failed to Initiate Voice Session", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Try Again", Toast.LENGTH_SHORT).show()
+                    }
+                )
             }
         } else {
-            chatViewModel.initVoiceSession(activeConversationIdFromTopLevel)
+            chatViewModel.initVoiceSession(
+                activeConversationIdFromTopLevel,
+                onFailed = {
+                    setShowTabBar(true)
+                    setShowVoiceChat(false)
+                    Toast.makeText(context, "Failed to Initiate Voice Session", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Try Again", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }) {
         Icon(
@@ -260,6 +284,8 @@ fun ChatMessageScreen(
 fun NewChatScreen(
     activeConversationIdFromTopLevel: String?, // Renamed to avoid conflict with local var
     setActiveConversationIdFromTopLevel: (String?) -> Unit, // Callback to TopLevelApp
+    activeConversationTitleFromTopLevel: String,
+    setActiveConversationTitleFromTopLevel: (String) -> Unit,
     setShowTabBar: (Boolean) -> Unit,
     chatViewModel: ChatViewModel,
     settingsViewModel: SettingsViewModel
@@ -290,6 +316,7 @@ fun NewChatScreen(
                 OpenVoiceChatButton(
                     activeConversationIdFromTopLevel = activeConversationIdFromTopLevel,
                     setActiveConversationIdFromTopLevel = setActiveConversationIdFromTopLevel,
+                    activeConversationTitleFromTopLevel = activeConversationTitleFromTopLevel,
                     setShowVoiceChat = { showVoiceChat = it },
                     setShowTabBar = setShowTabBar,
                     chatViewModel = chatViewModel
@@ -323,10 +350,24 @@ fun NewChatScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp), // Adjusted padding
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        EditableTextWithIcon(
+                            initialText = activeConversationTitleFromTopLevel,
+                            onTextChanged = {
+                                setActiveConversationTitleFromTopLevel(it)
+                                if (activeConversationIdFromTopLevel != null) {
+                                    chatViewModel.updateActiveConversationTitle(activeConversationIdFromTopLevel, it)
+                                }
+                            }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     if (showVoiceChat) {
-                        Timber.i {"PRE-IF. url: $liveKitUrl\n token: $liveKitToken\n activeConversationIdFromTopLevel:$activeConversationIdFromTopLevel" }
                         if (liveKitToken == null || activeConversationIdFromTopLevel == null) {
-                            Timber.i {"IF. url: $liveKitUrl\n token: $liveKitToken\n activeConversationIdFromTopLevel:$activeConversationIdFromTopLevel" }
                             Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 CircularProgressIndicator()
                                 Text("Loading voice chat session...", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top=8.dp))
@@ -360,6 +401,48 @@ fun NewChatScreen(
             }
         }
     )
+}
+
+@Composable
+fun EditableTextWithIcon(
+    initialText: String,
+    onTextChanged: (String) -> Unit // Callback to notify when text is saved
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf(initialText) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        if (isEditing) {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.weight(1f),
+                textStyle = MaterialTheme.typography.headlineSmall
+            )
+        } else {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.weight(1f).padding(end = 8.dp) // Add some padding so text doesn't overlap icon
+            )
+        }
+
+        IconButton(onClick = {
+            if (isEditing) {
+                onTextChanged(text) // Notify the parent about the change
+            }
+            isEditing = !isEditing
+        }) {
+            Icon(
+                imageVector = if (isEditing) Icons.Filled.Check else Icons.Filled.Edit,
+                contentDescription = if (isEditing) "Save changes" else "Edit text"
+            )
+        }
+    }
 }
 
 @Composable

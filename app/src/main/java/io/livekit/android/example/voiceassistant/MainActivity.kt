@@ -38,6 +38,7 @@ import io.livekit.android.example.voiceassistant.ui.NewChatScreen
 import io.livekit.android.example.voiceassistant.ui.SettingsScreen
 import io.livekit.android.example.voiceassistant.ui.theme.LiveKitVoiceAssistantExampleTheme
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
+import io.livekit.android.example.voiceassistant.viewmodels.HistoryViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 import io.livekit.android.util.LoggingLevel
 
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
 
         val chatViewModel = ChatViewModel()
         val settingsViewModel = SettingsViewModel()
+        val historyViewModel = HistoryViewModel()
 
         settingsViewModel.fetchUserProfile()
 
@@ -58,6 +60,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         chatViewModel = chatViewModel,
                         settingsViewModel = settingsViewModel,
+                        historyViewModel = historyViewModel
                     )
                 }
             }
@@ -68,7 +71,8 @@ class MainActivity : ComponentActivity() {
     fun TopLevelApp(
         modifier: Modifier = Modifier,
         chatViewModel: ChatViewModel,
-        settingsViewModel: SettingsViewModel
+        settingsViewModel: SettingsViewModel,
+        historyViewModel: HistoryViewModel
     ) {
         Timber.i {"Load TopLevelApp"}
         Timber.i {"ViewModel instance in X: $chatViewModel"}
@@ -81,6 +85,7 @@ class MainActivity : ComponentActivity() {
         )
         var selectedTabIndex by remember { mutableIntStateOf(0) }
         var activeConversationId by remember { mutableStateOf<String?>(null) }
+        var activeConversationTitle by remember { mutableStateOf<String>("New Chat") }
         var showTabBar by remember {mutableStateOf(true)}
 
         Box(
@@ -92,22 +97,22 @@ class MainActivity : ComponentActivity() {
                 when (selectedTabIndex) {
                     0 -> NewChatScreen( // Chat Tab
                         activeConversationIdFromTopLevel = activeConversationId,
-                        setActiveConversationIdFromTopLevel = { convId ->
-                            activeConversationId = convId
-                            // If a new conversation is started from ChatScreen itself,
-                            // it's already on the ChatScreen. No tab switch needed here.
-                        },
-                        setShowTabBar = { show -> showTabBar = show },
+                        setActiveConversationIdFromTopLevel = { activeConversationId = it },
+                        activeConversationTitleFromTopLevel = activeConversationTitle,
+                        setActiveConversationTitleFromTopLevel = { activeConversationTitle = it },
+                        setShowTabBar = { showTabBar = it },
                         chatViewModel = chatViewModel,
                         settingsViewModel = settingsViewModel
                     )
                     1 -> HistoryScreen( // History Tab
-                        onSelectConversationAndNavigate = { conversationId ->
+                        onSelectConversationAndNavigate = { conversationId, conversationTitle ->
                             Timber.d { "History: Conversation $conversationId selected. Navigating to Chat." }
                             activeConversationId = conversationId
+                            activeConversationTitle = conversationTitle
                             selectedTabIndex = 0
                         },
-                        chatViewModel = chatViewModel
+                        chatViewModel = chatViewModel,
+                        historyViewModel = historyViewModel
                     )
                     2 -> SettingsScreen(chatViewModel = chatViewModel, settingsViewModel = settingsViewModel)
                 }

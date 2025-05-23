@@ -11,6 +11,7 @@ import io.livekit.android.example.voiceassistant.data.CreateConversationRequest
 import io.livekit.android.example.voiceassistant.data.CreateMessageRequest
 import io.livekit.android.example.voiceassistant.data.CreateVoiceSessionRequest
 import io.livekit.android.example.voiceassistant.data.Message
+import io.livekit.android.example.voiceassistant.data.UpdateConversationRequest
 import io.livekit.android.example.voiceassistant.data.VoiceSessionResponse
 import io.livekit.android.example.voiceassistant.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,9 @@ class ChatViewModel : ViewModel() {
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
+
+    private val _conversationTitle = MutableStateFlow<List<Message>>(emptyList())
+    val conversationTitle: StateFlow<List<Message>> = _conversationTitle.asStateFlow()
 
     private val _liveKitToken = MutableStateFlow<String?>(null)
     val liveKitToken: StateFlow<String?> = _liveKitToken.asStateFlow()
@@ -79,7 +83,7 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    fun initVoiceSession(conversationId: String) {
+    fun initVoiceSession(conversationId: String, onFailed: () -> Unit) {
         if (!AuthManager.isLoggedIn) {
             _error.value = "Please log in to use voice chat."
             resetChatState()
@@ -108,8 +112,10 @@ class ChatViewModel : ViewModel() {
                     Timber.i { "LiveKit voice session (${voiceSession.id}) created, token received for conversation $conversationId" }
                 } else if (vsResponse.code == 401) {
                     _isAuthExpired.value = true
+                    onFailed()
                     _error.value = ViewModelUtils.parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
                 } else {
+                    onFailed()
                     _error.value = ViewModelUtils.parseError(vsResponseBodyString, vsResponse.code, vsResponse.message, "Voice session creation failed")
                 }
             } catch (e: Exception) {
@@ -165,7 +171,7 @@ class ChatViewModel : ViewModel() {
             // _error.value = null; // Don't clear potential voice session error
 
             val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId/messages"
-            Timber.d { "Fetching messages for $conversationId from $fullUrl" }
+            Timber.d { "Fetching messages for $conversationId" }
             try {
                 val request = Request.Builder().url(fullUrl).get().build()
                 val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
@@ -267,6 +273,44 @@ class ChatViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 ViewModelUtils.handleException(e, "send message", fullUrl, _error)
+            } finally {
+                // If a general isLoading was true for sending, set it to false here.
+            }
+        }
+    }
+
+    fun updateActiveConversationTitle(conversationId: String, conversationTitle: String) {
+        if (!AuthManager.isLoggedIn) {
+            _error.value = "Please log in to send a message"
+            return
+        }
+        viewModelScope.launch {
+            _error.value = null
+            val fullUrl = "$API_BASE_URL/api/v1/conversations/$conversationId"
+            Timber.d { "update title of Conversation $conversationId" }
+            try {
+                val createRequest = UpdateConversationRequest(title = conversationTitle)
+                val requestBody = gson.toJson(createRequest).toRequestBody(jsonMediaType)
+                val request = Request.Builder().url(fullUrl).put(requestBody).build()
+
+                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
+                val responseBodyString = withContext(Dispatchers.IO) { response.body?.string() }
+
+                if (response.isSuccessful && !responseBodyString.isNullOrEmpty()) { // Check for isSuccessful()
+                    // Assuming the response is the sent message or updated conversation.
+                    // For now, just log success. Consider updating _messages or fetching new messages.
+                    val updateConversationConfirmation = gson.fromJson(responseBodyString, Conversation::class.java) // Or appropriate response type
+                    Timber.i { "Message sent successfully (Confirmed ID: ${updateConversationConfirmation.id})" }
+                    // Potentially fetch messages again to update the list:
+                    // fetchMessages(conversationId)
+                } else if (response.code == 401) {
+                    _isAuthExpired.value = true
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Update Title failed")
+                } else {
+                    _error.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Update Title failed")
+                }
+            } catch (e: Exception) {
+                ViewModelUtils.handleException(e, "update title", fullUrl, _error)
             } finally {
                 // If a general isLoading was true for sending, set it to false here.
             }

@@ -22,8 +22,8 @@ import io.livekit.android.example.voiceassistant.viewmodels.HistoryViewModel
 @Composable
 fun HistoryScreen(
     chatViewModel: ChatViewModel,
-    historyViewModel: HistoryViewModel = viewModel(),
-    onSelectConversationAndNavigate: (conversationId: String) -> Unit
+    historyViewModel: HistoryViewModel,
+    onSelectConversationAndNavigate: (conversationId: String, conversationTitle: String) -> Unit
 ) {
     val conversations by historyViewModel.conversations.collectAsState()
     val isLoading by historyViewModel.isLoading.collectAsState()
@@ -101,7 +101,7 @@ fun HistoryScreen(
                                 ConversationHistoryItem(
                                     conversation = conversation,
                                     onClick = {
-                                        onSelectConversationAndNavigate(conversation.id)
+                                        onSelectConversationAndNavigate(conversation.id, conversation.title)
                                     },
                                     onDelete = {
                                         historyViewModel.deleteConversation(conversation.id)
@@ -133,7 +133,7 @@ fun HistoryScreen(
                                     focusManager.clearFocus()
                                     showCreateDialog = false
                                     chatViewModel.createNewConversationAndSelect(newConversationTitle) {
-                                        onSelectConversationAndNavigate(it)
+                                        onSelectConversationAndNavigate(it, newConversationTitle)
                                     }
                                 }
                             },
