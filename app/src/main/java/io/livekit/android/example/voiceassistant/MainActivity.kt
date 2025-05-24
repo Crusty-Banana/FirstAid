@@ -88,12 +88,12 @@ class MainActivity : ComponentActivity() {
         var activeConversationTitle by remember { mutableStateOf<String>("New Chat") }
         var showTabBar by remember {mutableStateOf(true)}
 
-        Box(
+        Column(
             modifier = modifier
                 .fillMaxSize()
         ) {
             // Content area
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.weight(1f)) {
                 when (selectedTabIndex) {
                     0 -> NewChatScreen( // Chat Tab
                         activeConversationIdFromTopLevel = activeConversationId,
@@ -122,15 +122,13 @@ class MainActivity : ComponentActivity() {
             if (showTabBar) {
                 Column(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                 ) {
                     TabRow(
                         selectedTabIndex = selectedTabIndex,
                         containerColor = Color(0xFF134D8B),
                         contentColor = Color.White,
-                        divider = {},
-                        modifier = Modifier.height(50.dp)
+                        divider = {}
                     ) {
                         tabs.forEachIndexed { index, title ->
                             Tab(

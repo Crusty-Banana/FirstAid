@@ -44,8 +44,6 @@ fun HistoryScreen(
     }
 
     Scaffold(
-        modifier = Modifier
-            .padding(bottom = 25.dp),
         floatingActionButton = {
             if (isLoggedIn) {
                 FloatingActionButton(onClick = {
@@ -61,8 +59,8 @@ fun HistoryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 8.dp), // Adjusted padding
+                    .padding(top = paddingValues.calculateTopPadding())
+                    .padding(horizontal = 16.dp), // Adjusted padding
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (!isLoggedIn) {
@@ -75,7 +73,7 @@ fun HistoryScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Conversation History", style = MaterialTheme.typography.headlineSmall)
+                        Text("Conversation History", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
                         Button(onClick = { historyViewModel.fetchConversations() }, enabled = !isLoading) {
                             Text(if (isLoading && conversations.isEmpty()) "Loading..." else "Refresh")
                         }
@@ -96,7 +94,7 @@ fun HistoryScreen(
                             Text("No conversation history found. Tap '+' to create one.", style = MaterialTheme.typography.bodyMedium)
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
                             items(conversations, key = { it.id }) { conversation ->
                                 ConversationHistoryItem(
                                     conversation = conversation,

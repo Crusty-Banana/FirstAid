@@ -309,8 +309,6 @@ fun NewChatScreen(
     }
 
     Scaffold(
-        modifier = Modifier
-            .padding(bottom = 25.dp),
         floatingActionButton = {
             if (!showVoiceChat && isLoggedIn) {
                 OpenVoiceChatButton(
@@ -346,8 +344,8 @@ fun NewChatScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 16.dp, vertical = 8.dp), // Adjusted padding
+                        .padding(top = paddingValues.calculateTopPadding())
+                        .padding(horizontal = 16.dp), // Adjusted padding
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
