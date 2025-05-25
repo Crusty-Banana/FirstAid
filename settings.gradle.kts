@@ -24,7 +24,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LiveKit Voice Assistant Example"
+rootProject.name = "First Aid"
 include(":app")
 
 // For local development with the LiveKit Android SDK only.
