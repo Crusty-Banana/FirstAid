@@ -1,7 +1,6 @@
 package io.livekit.android.example.voiceassistant.ui
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText // Import ClickableText
@@ -15,23 +14,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext // Import LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.util.PatternsCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 import io.livekit.android.example.voiceassistant.BuildConfig
-import java.util.regex.Pattern
+import io.livekit.android.example.voiceassistant.R
 import androidx.core.net.toUri
-
-// Simple regex for YYYY-MM-DD format, can be improved for date validity
-private val DATE_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$")
+import androidx.compose.material3.Icon
 
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +57,9 @@ fun SettingsScreen(
     // Input validation states
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // State for password visibility
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
     // Profile edit states
     var editFirstName by rememberSaveable { mutableStateOf("") }
@@ -114,7 +115,8 @@ fun SettingsScreen(
                         onValueChange = { passwordInput = it; passwordError = null },
                         label = { Text("Password") },
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        // Apply visual transformation based on passwordVisible state
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             focusManager.clearFocus()
@@ -122,6 +124,25 @@ fun SettingsScreen(
                                 settingsViewModel.login(emailInput, passwordInput)
                             }
                         }),
+                        trailingIcon = {
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            val icon = if (passwordVisible) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_visibility),
+                                    contentDescription = description,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            } else {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_visibility_off),
+                                        contentDescription = description,
+                                        modifier = Modifier.size(26.dp)
+                                )
+                            }
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                icon
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         isError = passwordError != null,
                         supportingText = { passwordError?.let { Text(it) } }
@@ -183,7 +204,8 @@ fun SettingsScreen(
                         value = passwordInput,
                         onValueChange = { passwordInput = it; passwordError = null },
                         label = { Text("Password") },
-                        visualTransformation = PasswordVisualTransformation(),
+                        // Apply visual transformation based on passwordVisible state
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             focusManager.clearFocus()
@@ -191,6 +213,25 @@ fun SettingsScreen(
                                 settingsViewModel.registerUser(emailInput, passwordInput, firstNameInput, lastNameInput)
                             }
                         }),
+                        trailingIcon = {
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            val icon = if (passwordVisible) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_visibility),
+                                    contentDescription = description,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            } else {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_visibility_off),
+                                    contentDescription = description,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                icon
+                            }
+                        },
                         singleLine = true, modifier = Modifier.fillMaxWidth(),
                         isError = passwordError != null,
                         supportingText = { passwordError?.let { Text(it) } }
@@ -363,14 +404,4 @@ private fun validateRegistrationInputs(email: String, pass: String, firstName: S
     }
 
     return isValid
-}
-
-private fun validateDob(dob: String, setDobError: (String?) -> Unit): Boolean {
-    if (!DATE_PATTERN.matcher(dob).matches()) {
-        setDobError("Date must be in YYYY-MM-DD format")
-        return false
-    }
-    // Add more sophisticated date validation if needed (e.g., check if it's a real date)
-    setDobError(null)
-    return true
 }
