@@ -24,10 +24,14 @@ android {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"https://medbot-backend.fly.dev\"")
             buildConfigField("String", "LIVEKIT_WS_URL", "\"wss://clinical-chatbot-1dewlazs.livekit.cloud\"")
+            buildConfigField("String", "PRIVACY_POLICY_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
+            buildConfigField("String", "TERM_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://medbot-backend.fly.dev\"")
             buildConfigField("String", "LIVEKIT_WS_URL", "\"wss://clinical-chatbot-1dewlazs.livekit.cloud\"")
+            buildConfigField("String", "PRIVACY_POLICY_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
+            buildConfigField("String", "TERM_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

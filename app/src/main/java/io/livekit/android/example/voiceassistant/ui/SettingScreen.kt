@@ -1,7 +1,10 @@
 package io.livekit.android.example.voiceassistant.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.ClickableText // Import ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -11,9 +14,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext // Import LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.core.util.PatternsCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -21,10 +28,12 @@ import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 import io.livekit.android.example.voiceassistant.BuildConfig
 import java.util.regex.Pattern
+import androidx.core.net.toUri
 
 // Simple regex for YYYY-MM-DD format, can be improved for date validity
 private val DATE_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$")
 
+@Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -45,11 +54,11 @@ fun SettingsScreen(
     var firstNameInput by rememberSaveable { mutableStateOf("") }
     var lastNameInput by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current // Get the current context
 
     // Input validation states
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
-    var dobError by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Profile edit states
     var editFirstName by rememberSaveable { mutableStateOf("") }
@@ -187,6 +196,41 @@ fun SettingsScreen(
                         supportingText = { passwordError?.let { Text(it) } }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
+
+                    // Terms and Privacy Policy Text
+                    val annotatedString = buildAnnotatedString {
+                        append("By continuing you agree to our ")
+                        pushStringAnnotation(tag = "TERMS", annotation = BuildConfig.TERM_URL)
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                            append("Term")
+                        }
+                        pop()
+                        append(" and ")
+                        pushStringAnnotation(tag = "PRIVACY", annotation = BuildConfig.PRIVACY_POLICY_URL)
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                            append("Privacy Policy")
+                        }
+                        pop()
+                    }
+
+                    ClickableText(
+                        text = annotatedString,
+                        onClick = { offset ->
+                            annotatedString.getStringAnnotations(tag = "TERMS", start = offset, end = offset)
+                                .firstOrNull()?.let { annotation ->
+                                    val intent = Intent(Intent.ACTION_VIEW, annotation.item.toUri())
+                                    context.startActivity(intent)
+                                }
+                            annotatedString.getStringAnnotations(tag = "PRIVACY", start = offset, end = offset)
+                                .firstOrNull()?.let { annotation ->
+                                    val intent = Intent(Intent.ACTION_VIEW, annotation.item.toUri())
+                                    context.startActivity(intent)
+                                }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
 
                     if (isLoading) {
                         CircularProgressIndicator()
