@@ -51,7 +51,7 @@ data class UserProfile(
     val id: String,
     val first_name: String,
     val last_name: String,
-    val date_of_birth: String,
+    val date_of_birth: String?,
 //    val medical_history_id: String,
 //    val preferences: UserPreferences,
     val created_at: String,

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.ajalt.timberkt.Timber
 import com.google.gson.Gson
+import io.livekit.android.example.voiceassistant.BuildConfig
 import io.livekit.android.example.voiceassistant.auth.AuthManager
 import io.livekit.android.example.voiceassistant.data.LoginRequest
 import io.livekit.android.example.voiceassistant.data.LoginResponse
@@ -25,7 +26,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class SettingsViewModel : ViewModel() {
 
     // TODO: Consider moving this to BuildConfig or a configuration file
-    private val API_BASE_URL = "https://medbot-backend.fly.dev"
+    private val API_BASE_URL = BuildConfig.API_BASE_URL
 
     // Using NetworkClient for consistency and shared configuration
     private val unauthHttpClient = NetworkClient.unauthenticatedClient
@@ -167,7 +168,7 @@ class SettingsViewModel : ViewModel() {
             try {
                 val success = AuthManager.refreshAccessToken(
                     unauthHttpClient, // Pass the unauthenticated client
-                    API_BASE_URL,     // Pass the API base URL
+                    API_BASE_URL,     // Pass the API base URL (already updated to BuildConfig.API_BASE_URL)
                     gson              // Pass the Gson instance
                 )
 
@@ -229,7 +230,7 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun updateUserProfile(firstName: String, lastName: String, dateOfBirth: String) {
+    fun updateUserProfile(firstName: String, lastName: String) {
         viewModelScope.launch {
             if (AuthManager.getAccessTokenValue() == null) {
                 _operationError.value = "Not logged in."
@@ -244,7 +245,6 @@ class SettingsViewModel : ViewModel() {
                 val updateRequest = UpdateUserProfileRequest(
                     first_name = firstName.takeIf { it.isNotBlank() && it != _userProfile.value?.first_name },
                     last_name = lastName.takeIf { it.isNotBlank() && it != _userProfile.value?.last_name },
-                    date_of_birth = dateOfBirth.takeIf { it.isNotBlank() && it != _userProfile.value?.date_of_birth }
                 )
                 // Only send request if there is something to update
                 if (updateRequest.first_name == null && updateRequest.last_name == null && updateRequest.date_of_birth == null) {

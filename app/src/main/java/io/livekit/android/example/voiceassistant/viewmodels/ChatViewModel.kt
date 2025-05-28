@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.ajalt.timberkt.Timber
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import io.livekit.android.example.voiceassistant.BuildConfig
 import io.livekit.android.example.voiceassistant.auth.AuthManager
 import io.livekit.android.example.voiceassistant.data.Conversation
 import io.livekit.android.example.voiceassistant.data.CreateConversationRequest
@@ -29,8 +30,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class ChatViewModel : ViewModel() {
     // TODO: Consider moving these to BuildConfig or a configuration file
-    private val API_BASE_URL = "https://medbot-backend.fly.dev"
-    val LIVEKIT_WS_URL = "wss://clinical-chatbot-1dewlazs.livekit.cloud"
+    private val API_BASE_URL = BuildConfig.API_BASE_URL
+    val LIVEKIT_WS_URL = BuildConfig.LIVEKIT_WS_URL
 
     private val gson = Gson()
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()

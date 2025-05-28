@@ -38,20 +38,35 @@ object ViewModelUtils {
         httpMessage: String,
         context: String = "Operation failed"
     ): String {
+        Timber.w {"API Error: Code: $code, Message: $httpMessage, Body: $body, Context: $context"} // Log detailed error
         return if (!body.isNullOrEmpty()) {
             try {
                 gson.fromJson(body, ApiError::class.java)?.let { apiError ->
-                    apiError.message ?: apiError.detail ?: apiError.error ?: apiError.errors?.joinToString() ?: "$context (Code: $code)"
-                } ?: "$context: $httpMessage (Code: $code)"
+                    // Prefer specific messages if available, otherwise generic
+                    val userFacingMessage = apiError.message ?: apiError.detail ?: apiError.error ?: apiError.errors?.joinToString()
+                    if (!userFacingMessage.isNullOrBlank()) {
+                        userFacingMessage // Return specific backend message if considered safe
+                    } else {
+                        "$context. Please try again later. (Code: $code)" // Generic user-facing message
+                    }
+                } ?: "$context: An issue occurred. (Code: $code)" // More generic if parsing ApiError fails
             } catch (e: com.google.gson.JsonSyntaxException) { // Be specific about the exception type
                 Timber.w(e) { "JSON syntax error parsing error body: $body" }
-                "$context: Invalid error format (Code: $code). Details: $httpMessage"
+                "An unexpected error occurred while processing the server response. Please try again." // Generic
             } catch (e: Exception) {
                 Timber.w(e) { "Unexpected error parsing error body: $body" }
-                "$context: Error processing error response (Code: $code). Details: $httpMessage"
+                "An unexpected server error occurred. Please try again." // Generic
             }
         } else {
-            "$context: $httpMessage (Code: $code)"
+            // If body is null or empty, provide a generic message based on HTTP code
+            when (code) {
+                400 -> "Invalid request. Please check your input and try again."
+                401 -> "Authentication failed. Please log in again."
+                403 -> "You do not have permission to perform this action."
+                404 -> "The requested information could not be found."
+                in 500..599 -> "The server encountered an error. Please try again later."
+                else -> "$context: $httpMessage (Code: $code)" // Fallback, but try to make this more generic too
+            }
         }
     }
 } 

@@ -2,8 +2,7 @@ package io.livekit.android.example.voiceassistant.network
 
 import com.github.ajalt.timberkt.Timber
 import com.google.gson.Gson
-// TODO: IMPORTANT - Replace 'true' with 'io.livekit.android.example.voiceassistant.BuildConfig.DEBUG' once BuildConfig is correctly resolved.
-// import io.livekit.android.example.voiceassistant.BuildConfig 
+import io.livekit.android.example.voiceassistant.BuildConfig // Ensure this import is correct and BuildConfig is generated
 import io.livekit.android.example.voiceassistant.auth.AuthInterceptor
 import io.livekit.android.example.voiceassistant.auth.AuthManager
 import io.livekit.android.example.voiceassistant.auth.TokenRefreshAuthenticator
@@ -15,10 +14,7 @@ object NetworkClient {
 
     private const val TIMEOUT_SECONDS = 30L
     // API_BASE_URL needed for TokenRefreshAuthenticator, should be configurable
-    private const val API_BASE_URL = "https://medbot-backend.fly.dev" // TODO: Make this configurable
-
-    // TODO: Replace 'true' with 'BuildConfig.DEBUG' once BuildConfig is correctly resolved in your project.
-    private const val ENABLE_DEBUG_LOGGING = true 
+    // private const val API_BASE_URL = "https://medbot-backend.fly.dev" // TODO: Make this configurable
 
     // Client for calls that DO NOT require authentication (e.g., login, register)
     val unauthenticatedClient: OkHttpClient by lazy {
@@ -27,7 +23,7 @@ object NetworkClient {
             .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .apply {
-                if (ENABLE_DEBUG_LOGGING) { 
+                if (BuildConfig.DEBUG) {
                     val loggingInterceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
                         override fun log(message: String) {
                             Timber.tag("OkHttp-Unauth").d(message)
@@ -49,9 +45,9 @@ object NetworkClient {
             .readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .addInterceptor(AuthInterceptor(AuthManager))
-            .authenticator(TokenRefreshAuthenticator(AuthManager, API_BASE_URL, gson))
+            .authenticator(TokenRefreshAuthenticator(AuthManager, BuildConfig.API_BASE_URL, gson))
             .apply {
-                if (ENABLE_DEBUG_LOGGING) { 
+                if (BuildConfig.DEBUG) {
                     val loggingInterceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
                         override fun log(message: String) {
                             Timber.tag("OkHttp-Auth").d(message)

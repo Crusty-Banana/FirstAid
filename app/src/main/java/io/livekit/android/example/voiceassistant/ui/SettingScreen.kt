@@ -15,9 +15,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.util.PatternsCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
+import io.livekit.android.example.voiceassistant.BuildConfig
+import java.util.regex.Pattern
+
+// Simple regex for YYYY-MM-DD format, can be improved for date validity
+private val DATE_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,17 +46,20 @@ fun SettingsScreen(
     var lastNameInput by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
+    // Input validation states
+    var emailError by rememberSaveable { mutableStateOf<String?>(null) }
+    var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var dobError by rememberSaveable { mutableStateOf<String?>(null) }
+
     // Profile edit states
     var editFirstName by rememberSaveable { mutableStateOf("") }
     var editLastName by rememberSaveable { mutableStateOf("") }
-    var editDateOfBirth by rememberSaveable { mutableStateOf("") }
 
     // Populate edit fields when profile is loaded or changes
     LaunchedEffect(userProfile) {
         userProfile?.let {
             editFirstName = it.first_name
             editLastName = it.last_name
-            editDateOfBirth = it.date_of_birth
         }
     }
 
@@ -82,27 +91,31 @@ fun SettingsScreen(
 
                     OutlinedTextField(
                         value = emailInput,
-                        onValueChange = { emailInput = it },
+                        onValueChange = { emailInput = it; emailError = null },
                         label = { Text("Email") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = emailError != null,
+                        supportingText = { emailError?.let { Text(it) } }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = passwordInput,
-                        onValueChange = { passwordInput = it },
+                        onValueChange = { passwordInput = it; passwordError = null },
                         label = { Text("Password") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             focusManager.clearFocus()
-                            if(emailInput.isNotBlank() && passwordInput.isNotBlank()) {
+                            if (validateLoginInputs(emailInput, passwordInput, {e -> emailError = e}, {p -> passwordError = p})) {
                                 settingsViewModel.login(emailInput, passwordInput)
                             }
                         }),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = passwordError != null,
+                        supportingText = { passwordError?.let { Text(it) } }
                     )
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -112,8 +125,10 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 focusManager.clearFocus()
-                                settingsViewModel.login(emailInput, passwordInput)
-                                chatViewModel.setIsAuthExpired(false)
+                                if (validateLoginInputs(emailInput, passwordInput, {e -> emailError = e}, {p -> passwordError = p})) {
+                                    settingsViewModel.login(emailInput, passwordInput)
+                                    chatViewModel.setIsAuthExpired(false)
+                                }
                             },
                             enabled = emailInput.isNotBlank() && passwordInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
@@ -146,25 +161,31 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = emailInput,
-                        onValueChange = { emailInput = it },
+                        onValueChange = { emailInput = it; emailError = null },
                         label = { Text("Email") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = emailError != null,
+                        supportingText = { emailError?.let { Text(it) } }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(
                         value = passwordInput,
-                        onValueChange = { passwordInput = it },
+                        onValueChange = { passwordInput = it; passwordError = null },
                         label = { Text("Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             focusManager.clearFocus()
-                            if (emailInput.isNotBlank() && passwordInput.isNotBlank() && firstNameInput.isNotBlank() && lastNameInput.isNotBlank()) {
+                            if (validateRegistrationInputs(emailInput, passwordInput, firstNameInput, lastNameInput, {e -> emailError = e}, {p -> passwordError = p})) {
                                 settingsViewModel.registerUser(emailInput, passwordInput, firstNameInput, lastNameInput)
-                        }
-                    }), singleLine = true, modifier = Modifier.fillMaxWidth())
+                            }
+                        }),
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        isError = passwordError != null,
+                        supportingText = { passwordError?.let { Text(it) } }
+                    )
                     Spacer(modifier = Modifier.height(24.dp))
 
                     if (isLoading) {
@@ -173,7 +194,9 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 focusManager.clearFocus()
-                                settingsViewModel.registerUser(emailInput, passwordInput, firstNameInput, lastNameInput)
+                                if (validateRegistrationInputs(emailInput, passwordInput, firstNameInput, lastNameInput, {e -> emailError = e}, {p -> passwordError = p})) {
+                                    settingsViewModel.registerUser(emailInput, passwordInput, firstNameInput, lastNameInput)
+                                }
                             },
                             enabled = emailInput.isNotBlank() && passwordInput.isNotBlank() && firstNameInput.isNotBlank() && lastNameInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
@@ -221,24 +244,14 @@ fun SettingsScreen(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = editDateOfBirth,
-                    onValueChange = { editDateOfBirth = it },
-                    label = { Text("Date of Birth (YYYY-MM-DD)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        settingsViewModel.updateUserProfile(editFirstName, editLastName, editDateOfBirth)
+                        settingsViewModel.updateUserProfile(editFirstName, editLastName)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = isLoading.not() && (editFirstName != userProfile?.first_name || editLastName != userProfile?.last_name || editDateOfBirth != userProfile?.date_of_birth)
+                    enabled = isLoading.not() && (editFirstName != userProfile?.first_name || editLastName != userProfile?.last_name)
                 ) { Text("Update Profile") }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -266,4 +279,54 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+private fun validateLoginInputs(email: String, pass: String, setEmailError: (String?) -> Unit, setPassError: (String?) -> Unit): Boolean {
+    var isValid = true
+    if (!PatternsCompat.EMAIL_ADDRESS.matcher(email).matches()) {
+        setEmailError("Invalid email address")
+        isValid = false
+    } else {
+        setEmailError(null)
+    }
+    if (pass.length < 8) { // Example: min 6 chars for password
+        setPassError("Password must be at least 8 characters")
+        isValid = false
+    } else if (!pass.any { it.isDigit() }) {
+        setPassError("Password contain at least 1 number")
+        isValid = false
+    } else if (!pass.any { it in "!@#$%^&*()_+-=[]{}|;:'\",.<>/?`~" }) {
+        setPassError("Password contain at least 1 special character")
+        isValid = false
+    } else {
+        setPassError(null)
+    }
+    return isValid
+}
+
+private fun validateRegistrationInputs(email: String, pass: String, firstName: String, lastName: String, setEmailError: (String?) -> Unit, setPassError: (String?) -> Unit): Boolean {
+    // Reusing login validation for email and pass, add checks for firstName, lastName if needed
+    val loginValid = validateLoginInputs(email, pass, setEmailError, setPassError)
+    var isValid = loginValid
+    // Add specific checks for firstName, lastName if desired (e.g., not blank)
+    if (firstName.isBlank()) {
+        // Consider adding a specific error state for firstName if you have a separate field for its error
+        isValid = false
+    }
+    if (lastName.isBlank()) {
+        // Consider adding a specific error state for lastName
+        isValid = false
+    }
+
+    return isValid
+}
+
+private fun validateDob(dob: String, setDobError: (String?) -> Unit): Boolean {
+    if (!DATE_PATTERN.matcher(dob).matches()) {
+        setDobError("Date must be in YYYY-MM-DD format")
+        return false
+    }
+    // Add more sophisticated date validation if needed (e.g., check if it's a real date)
+    setDobError(null)
+    return true
 }

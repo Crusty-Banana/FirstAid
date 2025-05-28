@@ -21,8 +21,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"https://medbot-backend.fly.dev\"")
+            buildConfigField("String", "LIVEKIT_WS_URL", "\"wss://clinical-chatbot-1dewlazs.livekit.cloud\"")
+        }
         release {
-            isMinifyEnabled = false
+            buildConfigField("String", "API_BASE_URL", "\"https://medbot-backend.fly.dev\"")
+            buildConfigField("String", "LIVEKIT_WS_URL", "\"wss://clinical-chatbot-1dewlazs.livekit.cloud\"")
+            isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -34,6 +40,7 @@ android {
         jvmTarget = "1.8"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     composeOptions {
