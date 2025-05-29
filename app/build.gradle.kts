@@ -12,7 +12,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 2
-        versionName = "2.2"
+        versionName = "3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -25,14 +25,14 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://medbot-backend.fly.dev\"")
             buildConfigField("String", "LIVEKIT_WS_URL", "\"wss://clinical-chatbot-1dewlazs.livekit.cloud\"")
             buildConfigField("String", "PRIVACY_POLICY_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
-            buildConfigField("String", "TERM_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
+            buildConfigField("String", "TERM_URL", "\"https://sites.google.com/view/first-aid-terms-of-service/home\"")
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://medbot-backend.fly.dev\"")
             buildConfigField("String", "LIVEKIT_WS_URL", "\"wss://clinical-chatbot-1dewlazs.livekit.cloud\"")
             buildConfigField("String", "PRIVACY_POLICY_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
-            buildConfigField("String", "TERM_URL", "\"https://sites.google.com/view/first-aid-pp/home\"")
-            isMinifyEnabled = true
+            buildConfigField("String", "TERM_URL", "\"https://sites.google.com/view/first-aid-terms-of-service/home\"")
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

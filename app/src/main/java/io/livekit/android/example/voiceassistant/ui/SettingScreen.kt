@@ -135,8 +135,8 @@ fun SettingsScreen(
                             } else {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_visibility_off),
-                                        contentDescription = description,
-                                        modifier = Modifier.size(26.dp)
+                                    contentDescription = description,
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -348,20 +348,15 @@ fun SettingsScreen(
                         onClick = { settingsViewModel.logout() },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Logout") }
-
-                    Button(
-                        onClick = {
-                            settingsViewModel.refreshAccessToken()
-                            chatViewModel.setIsAuthExpired(false)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Refresh Token") }
                 }
                 operationError?.let { // Display logout errors too
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
+            Spacer(modifier = Modifier.height(32.dp)) // Add some space before the footer
+            // Support Email Footer
+            Text("Contact us at: dodoankhac@gmail.com", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
