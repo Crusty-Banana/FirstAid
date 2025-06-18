@@ -12,8 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import io.livekit.android.example.voiceassistant.R
 import io.livekit.android.example.voiceassistant.data.Conversation
 import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
 import io.livekit.android.example.voiceassistant.viewmodels.HistoryViewModel
@@ -51,7 +52,7 @@ fun HistoryScreen(
                     newConversationTitle = "" // Reset title
                     showCreateDialog = true
                 }) {
-                    Icon(Icons.Filled.Add, "Create new conversation")
+                    Icon(Icons.Filled.Add, stringResource(id = R.string.create_new_conversation))
                 }
             }
         },
@@ -65,7 +66,7 @@ fun HistoryScreen(
             ) {
                 if (!isLoggedIn) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Please log in via Settings to view history.", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(id = R.string.login_to_view_history), style = MaterialTheme.typography.bodyLarge)
                     }
                 } else {
                     Row(
@@ -73,9 +74,9 @@ fun HistoryScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Conversation History", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                        Text(stringResource(id = R.string.conversation_history), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
                         Button(onClick = { historyViewModel.fetchConversations() }, enabled = !isLoading) {
-                            Text(if (isLoading && conversations.isEmpty()) "Loading..." else "Refresh")
+                            Text(if (isLoading && conversations.isEmpty()) stringResource(id = R.string.loading) else stringResource(id = R.string.refresh))
                         }
                     }
                     Spacer(modifier = Modifier.height(10.dp))
@@ -91,7 +92,7 @@ fun HistoryScreen(
                         }
                     } else if (conversations.isEmpty() && !isLoading) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No conversation history found. Tap '+' to create one.", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(id = R.string.no_conversation_history), style = MaterialTheme.typography.bodyMedium)
                         }
                     } else {
                         LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -115,12 +116,12 @@ fun HistoryScreen(
             if (showCreateDialog) {
                 AlertDialog(
                     onDismissRequest = { showCreateDialog = false },
-                    title = { Text("New Conversation") },
+                    title = { Text(stringResource(id = R.string.new_conversation)) },
                     text = {
                         OutlinedTextField(
                             value = newConversationTitle,
                             onValueChange = { newConversationTitle = it },
-                            label = { Text("Conversation Title") },
+                            label = { Text(stringResource(id = R.string.conversation_title)) },
                             singleLine = true,
                         )
                     },
@@ -136,10 +137,10 @@ fun HistoryScreen(
                                 }
                             },
                             enabled = newConversationTitle.isNotBlank()
-                        ) { Text("Create") }
+                        ) { Text(stringResource(id = R.string.create)) }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showCreateDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(id = R.string.cancel)) }
                     }
                 )
             }
@@ -154,13 +155,13 @@ fun ConversationHistoryItem(
     onDelete: () -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(conversation.title.ifBlank { "(Untitled Conversation)" }, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = { Text("Last updated: ${conversation.updated_at}", style = MaterialTheme.typography.bodySmall) },
+        headlineContent = { Text(conversation.title.ifBlank { stringResource(id = R.string.untitled_conversation) }, style = MaterialTheme.typography.titleMedium) },
+        supportingContent = { Text(stringResource(id = R.string.last_updated, conversation.updated_at), style = MaterialTheme.typography.bodySmall) },
         trailingContent = {
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "Delete conversation",
+                    contentDescription = stringResource(id = R.string.delete_conversation),
                     tint = MaterialTheme.colorScheme.error
                 )
             }

@@ -47,32 +47,26 @@ data class RefreshTokenResponse(
 )
 
 // --- User Profile Models ---
+data class UserPreferences(
+    val isVietnamese: Boolean,
+    val useRAG: Boolean
+)
+
 data class UserProfile(
     val id: String,
+    val email: String,
     val first_name: String,
     val last_name: String,
-    val date_of_birth: String?,
-//    val medical_history_id: String,
-//    val preferences: UserPreferences,
+    val preferences: UserPreferences?,
     val created_at: String,
     val updated_at: String
 )
 
-//data class UserPreferences(
-//    val theme: String,
-//    val notifications_enabled: Boolean
-//)
-
 data class UpdateUserProfileRequest(
     val first_name: String? = null,
     val last_name: String? = null,
-    val date_of_birth: String? = null
+    val preferences: UserPreferences? = null
 )
-
-//data class UpdateUserPreferencesRequest(
-//    val theme: String? = null,
-//    val notifications_enabled: Boolean? = null
-//)
 
 // --- Conversation Models ---
 data class Conversation(

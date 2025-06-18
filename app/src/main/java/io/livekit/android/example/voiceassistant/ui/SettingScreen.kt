@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext // Import LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -23,13 +24,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.core.util.PatternsCompat
-import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
-import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 import io.livekit.android.example.voiceassistant.BuildConfig
 import io.livekit.android.example.voiceassistant.R
-import androidx.core.net.toUri
-import androidx.compose.material3.Icon
+import io.livekit.android.example.voiceassistant.viewmodels.ChatViewModel
+import io.livekit.android.example.voiceassistant.viewmodels.SettingsViewModel
 
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,13 +96,13 @@ fun SettingsScreen(
         ) {
             if (accessToken == null) { // Not logged in
                 if (uiMode == "Login") {
-                    Text("Login", style = MaterialTheme.typography.headlineMedium)
+                    Text(stringResource(id = R.string.login), style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.height(24.dp))
 
                     OutlinedTextField(
                         value = emailInput,
                         onValueChange = { emailInput = it; emailError = null },
-                        label = { Text("Email") },
+                        label = { Text(stringResource(id = R.string.email)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth(),
@@ -113,19 +113,19 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = passwordInput,
                         onValueChange = { passwordInput = it; passwordError = null },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(id = R.string.password)) },
                         singleLine = true,
                         // Apply visual transformation based on passwordVisible state
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             focusManager.clearFocus()
-                            if (validateLoginInputs(emailInput, passwordInput, {e -> emailError = e}, {p -> passwordError = p})) {
+                            if (validateLoginInputs(emailInput, passwordInput, { e -> emailError = e }, { p -> passwordError = p })) {
                                 settingsViewModel.login(emailInput, passwordInput)
                             }
                         }),
                         trailingIcon = {
-                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            val description = if (passwordVisible) stringResource(id = R.string.hide_password) else stringResource(id = R.string.show_password)
                             val icon = if (passwordVisible) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_visibility),
@@ -155,26 +155,26 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (validateLoginInputs(emailInput, passwordInput, {e -> emailError = e}, {p -> passwordError = p})) {
+                                if (validateLoginInputs(emailInput, passwordInput, { e -> emailError = e }, { p -> passwordError = p })) {
                                     settingsViewModel.login(emailInput, passwordInput)
                                     chatViewModel.setIsAuthExpired(false)
                                 }
                             },
                             enabled = emailInput.isNotBlank() && passwordInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Login") }
+                        ) { Text(stringResource(id = R.string.login)) }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { uiMode = "Register" }) {
-                        Text("Don't have an account? Register")
+                        Text(stringResource(id = R.string.dont_have_account))
                     }
                 } else { // Register mode
-                    Text("Register", style = MaterialTheme.typography.headlineMedium)
+                    Text(stringResource(id = R.string.register), style = MaterialTheme.typography.headlineMedium)
                     Spacer(modifier = Modifier.height(24.dp))
                     OutlinedTextField(
                         value = firstNameInput,
                         onValueChange = { firstNameInput = it },
-                        label = { Text("First Name") },
+                        label = { Text(stringResource(id = R.string.first_name)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth()
@@ -183,7 +183,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = lastNameInput,
                         onValueChange = { lastNameInput = it },
-                        label = { Text("Last Name") },
+                        label = { Text(stringResource(id = R.string.last_name)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth()
@@ -192,7 +192,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = emailInput,
                         onValueChange = { emailInput = it; emailError = null },
-                        label = { Text("Email") },
+                        label = { Text(stringResource(id = R.string.email)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -203,18 +203,18 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = passwordInput,
                         onValueChange = { passwordInput = it; passwordError = null },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(id = R.string.password)) },
                         // Apply visual transformation based on passwordVisible state
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             focusManager.clearFocus()
-                            if (validateRegistrationInputs(emailInput, passwordInput, firstNameInput, lastNameInput, {e -> emailError = e}, {p -> passwordError = p})) {
+                            if (validateRegistrationInputs(emailInput, passwordInput, firstNameInput, lastNameInput, { e -> emailError = e }, { p -> passwordError = p })) {
                                 settingsViewModel.registerUser(emailInput, passwordInput, firstNameInput, lastNameInput)
                             }
                         }),
                         trailingIcon = {
-                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            val description = if (passwordVisible) stringResource(id = R.string.hide_password) else stringResource(id = R.string.show_password)
                             val icon = if (passwordVisible) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_visibility),
@@ -240,16 +240,16 @@ fun SettingsScreen(
 
                     // Terms and Privacy Policy Text
                     val annotatedString = buildAnnotatedString {
-                        append("By continuing you agree to our ")
+                        append(stringResource(id = R.string.terms_agreement_prefix))
                         pushStringAnnotation(tag = "TERMS", annotation = BuildConfig.TERM_URL)
                         withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                            append("Term")
+                            append(stringResource(id = R.string.terms))
                         }
                         pop()
-                        append(" and ")
+                        append(stringResource(id = R.string.terms_agreement_and))
                         pushStringAnnotation(tag = "PRIVACY", annotation = BuildConfig.PRIVACY_POLICY_URL)
                         withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
-                            append("Privacy Policy")
+                            append(stringResource(id = R.string.privacy_policy))
                         }
                         pop()
                     }
@@ -279,17 +279,17 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 focusManager.clearFocus()
-                                if (validateRegistrationInputs(emailInput, passwordInput, firstNameInput, lastNameInput, {e -> emailError = e}, {p -> passwordError = p})) {
+                                if (validateRegistrationInputs(emailInput, passwordInput, firstNameInput, lastNameInput, { e -> emailError = e }, { p -> passwordError = p })) {
                                     settingsViewModel.registerUser(emailInput, passwordInput, firstNameInput, lastNameInput)
                                 }
                             },
                             enabled = emailInput.isNotBlank() && passwordInput.isNotBlank() && firstNameInput.isNotBlank() && lastNameInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Register") }
+                        ) { Text(stringResource(id = R.string.register)) }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { uiMode = "Login" }) {
-                        Text("Already have an account? Login")
+                        Text(stringResource(id = R.string.already_have_account))
                     }
                 }
 
@@ -303,19 +303,19 @@ fun SettingsScreen(
                 }
 
             } else { // User is logged in
-                Text("User Profile", style = MaterialTheme.typography.headlineMedium)
+                Text(stringResource(id = R.string.user_profile), style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Email: ${loggedInUserEmail ?: "N/A"}", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(id = R.string.email_label, loggedInUserEmail ?: "N/A"), style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Profile Information Section
-                Text("Profile Information", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(id = R.string.profile_information), style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = editFirstName,
                     onValueChange = { editFirstName = it },
-                    label = { Text("First Name") },
+                    label = { Text(stringResource(id = R.string.first_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
@@ -324,7 +324,7 @@ fun SettingsScreen(
                 OutlinedTextField(
                     value = editLastName,
                     onValueChange = { editLastName = it },
-                    label = { Text("Last Name") },
+                    label = { Text(stringResource(id = R.string.last_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
@@ -333,13 +333,56 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        settingsViewModel.updateUserProfile(editFirstName, editLastName)
+                        settingsViewModel.updateUserProfile(editFirstName, editLastName, userProfile?.preferences)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = isLoading.not() && (editFirstName != userProfile?.first_name || editLastName != userProfile?.last_name)
-                ) { Text("Update Profile") }
+                ) { Text(stringResource(id = R.string.update_profile)) }
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Preferences Section
+                Text(stringResource(id = R.string.preferences), style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(stringResource(id = R.string.vietnamese_language))
+                    Switch(
+                        checked = userProfile?.preferences?.isVietnamese ?: false,
+                        onCheckedChange = { isVietnamese ->
+                            settingsViewModel.updateUserPreferences(
+                                isVietnamese = isVietnamese,
+                                useRAG = userProfile?.preferences?.useRAG ?: false
+                            )
+                        },
+                        enabled = isLoading.not()
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(stringResource(id = R.string.use_rag))
+                    Switch(
+                        checked = userProfile?.preferences?.useRAG ?: false,
+                        onCheckedChange = { useRAG ->
+                            settingsViewModel.updateUserPreferences(
+                                isVietnamese = userProfile?.preferences?.isVietnamese ?: false,
+                                useRAG = useRAG
+                            )
+                        },
+                        enabled = isLoading.not()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
 
                 if (isLoading) {
                     CircularProgressIndicator()
@@ -347,7 +390,7 @@ fun SettingsScreen(
                     Button(
                         onClick = { settingsViewModel.logout() },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Logout") }
+                    ) { Text(stringResource(id = R.string.logout)) }
                 }
                 operationError?.let { // Display logout errors too
                     Spacer(modifier = Modifier.height(16.dp))
@@ -356,7 +399,7 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.height(32.dp)) // Add some space before the footer
             // Support Email Footer
-            Text("Contact us at: dodoankhac@gmail.com", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(id = R.string.contact_us, "dodoankhac@gmail.com"), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }

@@ -12,6 +12,7 @@ import io.livekit.android.example.voiceassistant.data.RegisterRequest
 import io.livekit.android.example.voiceassistant.data.UserProfileResponse
 import io.livekit.android.example.voiceassistant.data.UserProfile
 import io.livekit.android.example.voiceassistant.data.UpdateUserProfileRequest
+import io.livekit.android.example.voiceassistant.data.UserPreferences
 import io.livekit.android.example.voiceassistant.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -230,7 +231,12 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
-    fun updateUserProfile(firstName: String, lastName: String) {
+    fun updateUserPreferences(isVietnamese: Boolean, useRAG: Boolean) {
+        val newPreferences = UserPreferences(isVietnamese = isVietnamese, useRAG = useRAG)
+        updateUserProfile(_userProfile.value?.first_name ?: "", _userProfile.value?.last_name ?: "", newPreferences)
+    }
+
+    fun updateUserProfile(firstName: String, lastName: String, preferences: UserPreferences? = null) {
         viewModelScope.launch {
             if (AuthManager.getAccessTokenValue() == null) {
                 _operationError.value = "Not logged in."
@@ -245,9 +251,10 @@ class SettingsViewModel : ViewModel() {
                 val updateRequest = UpdateUserProfileRequest(
                     first_name = firstName.takeIf { it.isNotBlank() && it != _userProfile.value?.first_name },
                     last_name = lastName.takeIf { it.isNotBlank() && it != _userProfile.value?.last_name },
+                    preferences = preferences.takeIf { it != _userProfile.value?.preferences }
                 )
                 // Only send request if there is something to update
-                if (updateRequest.first_name == null && updateRequest.last_name == null && updateRequest.date_of_birth == null) {
+                if (updateRequest.first_name == null && updateRequest.last_name == null && updateRequest.preferences == null) {
                     Timber.d { "No changes detected in profile, skipping update." }
                     _isLoading.value = false
                     return@launch
@@ -263,7 +270,7 @@ class SettingsViewModel : ViewModel() {
                     _userProfile.value = gson.fromJson(responseBodyString, UserProfile::class.java)
                 } else {
                     _operationError.value = ViewModelUtils.parseError(responseBodyString, response.code, response.message, "Failed to update profile")
-                     if (response.code == 401) AuthManager.logoutUser()
+                    if (response.code == 401) AuthManager.logoutUser()
                 }
             } catch (e: Exception) {
                 ViewModelUtils.handleException(e, "updateUserProfile", fullUrl, _operationError)

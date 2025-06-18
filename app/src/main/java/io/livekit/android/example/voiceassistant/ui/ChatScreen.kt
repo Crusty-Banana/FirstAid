@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.ajalt.timberkt.Timber
@@ -93,9 +94,11 @@ fun OpenVoiceChatButton(
     setShowTabBar: (Boolean) -> Unit,
     chatViewModel: ChatViewModel
 ) {
-    Timber.i {"Load OpenVoiceChatButton"}
-    Timber.i {"ViewModel instance in X: $chatViewModel"}
+    Timber.i { "Load OpenVoiceChatButton" }
+    Timber.i { "ViewModel instance in X: $chatViewModel" }
     val context = LocalContext.current
+    val voiceSessionFailedMessage = stringResource(id = R.string.toast_failed_to_initiate_voice_session)
+    val tryAgainMessage = stringResource(id = R.string.toast_try_again)
 
     FloatingActionButton(onClick = {
         setShowTabBar(false)
@@ -109,8 +112,8 @@ fun OpenVoiceChatButton(
                     onFailed = {
                         setShowTabBar(true)
                         setShowVoiceChat(false)
-                        Toast.makeText(context, "Failed to Initiate Voice Session", Toast.LENGTH_SHORT).show()
-                        Toast.makeText(context, "Try Again", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, voiceSessionFailedMessage, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, tryAgainMessage, Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -120,8 +123,8 @@ fun OpenVoiceChatButton(
                 onFailed = {
                     setShowTabBar(true)
                     setShowVoiceChat(false)
-                    Toast.makeText(context, "Failed to Initiate Voice Session", Toast.LENGTH_SHORT).show()
-                    Toast.makeText(context, "Try Again", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, voiceSessionFailedMessage, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, tryAgainMessage, Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -145,15 +148,15 @@ fun VoiceChatScreen(
     modifier: Modifier = Modifier,
     chatViewModel: ChatViewModel = ChatViewModel()
 ) {
-    Timber.i {"Load VoiceChatScreen"}
-    Timber.i {"ViewModel instance in X: $chatViewModel"}
+    Timber.i { "Load VoiceChatScreen" }
+    Timber.i { "ViewModel instance in X: $chatViewModel" }
     RoomScope(
         url,
         token,
         audio = true,
         connect = true,
-        onConnected = { room -> Timber.d {"Connected to room ${room.name} "}},
-        onDisconnected = { room -> Timber.d {"Disconnected to room ${room.name}"}}
+        onConnected = { room -> Timber.d { "Connected to room ${room.name} " } },
+        onDisconnected = { room -> Timber.d { "Disconnected to room ${room.name}" } }
     ) { room ->
         val voiceAssistant = rememberVoiceAssistant()
         var isMuted by remember { mutableStateOf(false) }
@@ -206,7 +209,7 @@ fun VoiceChatScreen(
                 ) {
                     Icon(
                         painter = painterResource(id = if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic),
-                        contentDescription = if (isMuted) "Unmute" else "Mute",
+                        contentDescription = if (isMuted) stringResource(id = R.string.unmute) else stringResource(id = R.string.mute),
                         modifier = Modifier.size(26.dp) // Icon size
                     )
                 }
@@ -244,8 +247,8 @@ fun ChatMessageScreen(
     chatViewModel: ChatViewModel = ChatViewModel(),
     settingsViewModel: SettingsViewModel = SettingsViewModel()
 ) {
-    Timber.i {"Load ChatMessageScreen"}
-    Timber.i {"ViewModel instance in X: $chatViewModel"}
+    Timber.i { "Load ChatMessageScreen" }
+    Timber.i { "ViewModel instance in X: $chatViewModel" }
     val lazyListState = rememberLazyListState()
     val messages by chatViewModel.messages.collectAsState()
     val userProfile by settingsViewModel.userProfile.collectAsState()
@@ -258,17 +261,22 @@ fun ChatMessageScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (messages.isEmpty()) {
-            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
-                    "Hello ${userProfile?.first_name}. Click voice button to start.",
+                    stringResource(id = R.string.hello_user_start, userProfile?.first_name ?: ""),
                     modifier = Modifier.padding(16.dp)
                 )
             }
-        }
-        else {
+        } else {
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier.weight(0.7f).fillMaxWidth(),
+                modifier = Modifier
+                    .weight(0.7f)
+                    .fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(messages, key = { message -> "msg-${message.id}" }) { message ->
@@ -290,8 +298,8 @@ fun NewChatScreen(
     chatViewModel: ChatViewModel,
     settingsViewModel: SettingsViewModel
 ) {
-    Timber.i {"Load NewChatScreen"}
-    Timber.i {"ViewModel instance in X: $chatViewModel"}
+    Timber.i { "Load NewChatScreen" }
+    Timber.i { "ViewModel instance in X: $chatViewModel" }
     var showVoiceChat by remember { mutableStateOf(false) }
     val liveKitToken by chatViewModel.liveKitToken.collectAsState()
     val isLoggedIn by chatViewModel.isLoggedIn.collectAsState()
@@ -331,14 +339,14 @@ fun NewChatScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Please log in via Settings to use Chat.", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(id = R.string.login_to_use_chat), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             } else if (isAuthExpired) {
                 setShowTabBar(true)
                 showVoiceChat = false
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Authentication Expired", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(id = R.string.auth_expired), style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
                 Column(
@@ -366,12 +374,20 @@ fun NewChatScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     if (showVoiceChat) {
                         if (liveKitToken == null || activeConversationIdFromTopLevel == null) {
-                            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
                                 CircularProgressIndicator()
-                                Text("Loading voice chat session...", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top=8.dp))
+                                Text(
+                                    stringResource(id = R.string.loading_voice_chat),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
                             }
                         } else {
-                            Timber.i {"ELSE. url: $liveKitUrl\n token: $liveKitToken\n activeConversationIdFromTopLevel:$activeConversationIdFromTopLevel" }
+                            Timber.i { "ELSE. url: $liveKitUrl\n token: $liveKitToken\n activeConversationIdFromTopLevel:$activeConversationIdFromTopLevel" }
                             // Safe call using let
                             val currentToken = liveKitToken!!
                             val currentConversationId = activeConversationIdFromTopLevel
@@ -387,9 +403,17 @@ fun NewChatScreen(
                         }
                     } else {
                         if (isLoading) {
-                            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
                                 CircularProgressIndicator()
-                                Text("Loading chat messages...", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top=8.dp))
+                                Text(
+                                    stringResource(id = R.string.loading_chat_messages),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
                             }
                         } else {
                             ChatMessageScreen(chatViewModel = chatViewModel, settingsViewModel = settingsViewModel)
@@ -423,9 +447,11 @@ fun EditableTextWithIcon(
             )
         } else {
             Text(
-                text = text,
+                text = if (text.isBlank()) stringResource(id = R.string.new_chat) else text,
                 style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.weight(1f).padding(end = 8.dp) // Add some padding so text doesn't overlap icon
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp) // Add some padding so text doesn't overlap icon
             )
         }
 
@@ -437,7 +463,7 @@ fun EditableTextWithIcon(
         }) {
             Icon(
                 imageVector = if (isEditing) Icons.Filled.Check else Icons.Filled.Edit,
-                contentDescription = if (isEditing) "Save changes" else "Edit text"
+                contentDescription = if (isEditing) stringResource(id = R.string.save_changes) else stringResource(id = R.string.edit_text)
             )
         }
     }

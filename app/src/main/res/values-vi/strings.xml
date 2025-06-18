@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">First Aid</string>
+
+    <string name="tab_chat">Trò chuyện</string>
+    <string name="tab_history">Lịch sử</string>
+    <string name="tab_settings">Cài đặt</string>
+
+    <string name="hello_user_start">Xin chào %1$s. Nhấn nút thoại để bắt đầu.</string>
+    <string name="login_to_use_chat">Vui lòng đăng nhập trong Cài đặt để sử dụng Trò chuyện.</string>
+    <string name="auth_expired">Xác thực đã hết hạn</string>
+    <string name="loading_voice_chat">Đang tải phiên trò chuyện thoại...</string>
+    <string name="loading_chat_messages">Đang tải tin nhắn...</string>
+    <string name="save_changes">Lưu thay đổi</string>
+    <string name="edit_text">Chỉnh sửa văn bản</string>
+    <string name="new_chat">Trò chuyện mới</string>
+    <string name="unmute">Bật tiếng</string>
+    <string name="mute">Tắt tiếng</string>
+    <string name="toast_failed_to_initiate_voice_session">Không thể bắt đầu phiên trò chuyện thoại</string>
+    <string name="toast_try_again">Thử lại</string>
+
+    <string name="conversation_history">Lịch sử cuộc trò chuyện</string>
+    <string name="refresh">Làm mới</string>
+    <string name="loading">Đang tải...</string>
+    <string name="no_conversation_history">Không tìm thấy lịch sử trò chuyện. Nhấn \'+\' để tạo mới.</string>
+    <string name="new_conversation">Cuộc trò chuyện mới</string>
+    <string name="conversation_title">Tiêu đề cuộc trò chuyện</string>
+    <string name="create">Tạo</string>
+    <string name="cancel">Hủy</string>
+    <string name="untitled_conversation">(Cuộc trò chuyện không có tiêu đề)</string>
+    <string name="last_updated">Cập nhật lần cuối: %1$s</string>
+    <string name="login_to_view_history">Vui lòng đăng nhập trong Cài đặt để xem lịch sử.</string>
+    <string name="create_new_conversation">Tạo cuộc trò chuyện mới</string>
+    <string name="delete_conversation">Xóa cuộc trò chuyện</string>
+
+    <string name="login">Đăng nhập</string>
+    <string name="email">Email</string>
+    <string name="password">Mật khẩu</string>
+    <string name="hide_password">Ẩn mật khẩu</string>
+    <string name="show_password">Hiện mật khẩu</string>
+    <string name="dont_have_account">Chưa có tài khoản? Đăng ký</string>
+    <string name="register">Đăng ký</string>
+    <string name="first_name">Tên</string>
+    <string name="last_name">Họ</string>
+    <string name="terms_agreement_prefix">Bằng việc tiếp tục, bạn đồng ý với </string>
+    <string name="terms">Điều khoản</string>
+    <string name="terms_agreement_and"> và </string>
+    <string name="privacy_policy">Chính sách bảo mật</string>
+    <string name="already_have_account">Đã có tài khoản? Đăng nhập</string>
+    <string name="user_profile">Hồ sơ người dùng</string>
+    <string name="email_label">Email: %1$s</string>
+    <string name="profile_information">Thông tin hồ sơ</string>
+    <string name="update_profile">Cập nhật hồ sơ</string>
+    <string name="preferences">Tùy chọn</string>
+    <string name="vietnamese_language">Tiếng Việt</string>
+    <string name="use_rag">Sử dụng RAG</string>
+    <string name="logout">Đăng xuất</string>
+    <string name="contact_us">Liên hệ với chúng tôi tại: %1$s</string>
+
+</resources>

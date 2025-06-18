@@ -1,3 +1,59 @@
 <resources>
     <string name="app_name">First Aid</string>
+
+    <string name="tab_chat">Chat</string>
+    <string name="tab_history">History</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="hello_user_start">Hello %1$s. Click voice button to start.</string>
+    <string name="login_to_use_chat">Please log in via Settings to use Chat.</string>
+    <string name="auth_expired">Authentication Expired</string>
+    <string name="loading_voice_chat">Loading voice chat session...</string>
+    <string name="loading_chat_messages">Loading chat messages...</string>
+    <string name="save_changes">Save changes</string>
+    <string name="edit_text">Edit text</string>
+    <string name="new_chat">New Chat</string>
+    <string name="unmute">Unmute</string>
+    <string name="mute">Mute</string>
+    <string name="toast_failed_to_initiate_voice_session">Failed to Initiate Voice Session</string>
+    <string name="toast_try_again">Try Again</string>
+
+    <string name="conversation_history">Conversation History</string>
+    <string name="refresh">Refresh</string>
+    <string name="loading">Loading...</string>
+    <string name="no_conversation_history">No conversation history found. Tap \'+\' to create one.</string>
+    <string name="new_conversation">New Conversation</string>
+    <string name="conversation_title">Conversation Title</string>
+    <string name="create">Create</string>
+    <string name="cancel">Cancel</string>
+    <string name="untitled_conversation">(Untitled Conversation)</string>
+    <string name="last_updated">Last updated: %1$s</string>
+    <string name="login_to_view_history">Please log in via Settings to view history.</string>
+    <string name="create_new_conversation">Create new conversation</string>
+    <string name="delete_conversation">Delete conversation</string>
+
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="hide_password">Hide password</string>
+    <string name="show_password">Show password</string>
+    <string name="dont_have_account">Don\'t have an account? Register</string>
+    <string name="register">Register</string>
+    <string name="first_name">First Name</string>
+    <string name="last_name">Last Name</string>
+    <string name="terms_agreement_prefix">By continuing you agree to our </string>
+    <string name="terms">Term</string>
+    <string name="terms_agreement_and"> and </string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="already_have_account">Already have an account? Login</string>
+    <string name="user_profile">User Profile</string>
+    <string name="email_label">Email: %1$s</string>
+    <string name="profile_information">Profile Information</string>
+    <string name="update_profile">Update Profile</string>
+    <string name="preferences">Preferences</string>
+    <string name="vietnamese_language">Vietnamese Language</string>
+    <string name="use_rag">Use RAG</string>
+    <string name="logout">Logout</string>
+    <string name="contact_us">Contact us at: %1$s</string>
+
 </resources>
