@@ -1,6 +1,4 @@
-# First Aid Android App
+# First Aid Android App (Product finalized)
 
 ## Tech stack
 Kotlin
-
-Product finalized.
